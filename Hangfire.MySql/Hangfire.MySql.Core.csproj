@@ -1,0 +1,44 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net461;netstandard1.6</TargetFrameworks>
+    <Description>Hangfire.MySql.Core</Description>
+    <PackageId>Hangfire.MySql.Core</PackageId>
+    <Product>Hangfire.MySql.Core</Product>
+    <Company>stulzq</Company>
+    <Authors>stulzq</Authors>
+    <Owners>Arnoldas Gudas</Owners>
+    <PackageLicenseUrl></PackageLicenseUrl>
+    <PackageProjectUrl></PackageProjectUrl>
+    <Copyright>Copyright 2017</Copyright>
+    <PackageTags>Hangfire MySql Hangfire.MySql Hangfire.MySql.Core</PackageTags>
+    <Version>1.0.0</Version>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Remove="Install.sql" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Install.sql" />
+  </ItemGroup>
+
+  <ItemGroup Condition=" '$(TargetFramework)' == 'net461' ">
+    <Reference Include="Microsoft.CSharp" />
+    <PackageReference Include="Dapper" Version="1.50.2" />
+    <PackageReference Include="Hangfire.Core" Version="1.6.13" />
+  </ItemGroup>
+
+  <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard1.6' ">
+    <PackageReference Include="Dapper" Version="1.50.2" />
+    <PackageReference Include="Hangfire.Core" Version="1.6.13" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard1.6'">
+    <PackageReference Include="MySql.Data">
+      <Version>7.0.7-m61</Version>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MySql.Data" Version="7.0.7-m61" />
+    <PackageReference Include="Newtonsoft.Json" Version="10.0.3" />
+  </ItemGroup>
+</Project>
