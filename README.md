@@ -1,8 +1,8 @@
 # Hangfire.MySql.Core Implementation
 
-##Hangfire.MySql.Core is based on Hangfire.MySqlStorage(https://github.com/arnoldasgudas/Hangfire.MySqlStorage)
+Hangfire.MySql.Core is based on Hangfire.MySqlStorage(https://github.com/arnoldasgudas/Hangfire.MySqlStorage)
 
-I fix some bug
+I fix some bug and support .net strandard 2.0
 
 [![Latest version](https://img.shields.io/nuget/v/Hangfire.MySqlStorage.svg)](https://www.nuget.org/packages/Hangfire.MySqlStorage/) 
 
