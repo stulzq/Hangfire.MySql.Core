@@ -1,4 +1,4 @@
-# Hangfire MySql Storage Implementation
+# Hangfire.MySql.Core Implementation
 [![Latest version](https://img.shields.io/nuget/v/Hangfire.MySqlStorage.svg)](https://www.nuget.org/packages/Hangfire.MySqlStorage/) 
 
 MySql storage implementation of [Hangfire](http://hangfire.io/) - fire-and-forget, delayed and recurring tasks runner for .NET. Scalable and reliable background job runner. Supports multiple servers, CPU and I/O intensive, long-running and short-running jobs.
@@ -8,10 +8,10 @@ MySql storage implementation of [Hangfire](http://hangfire.io/) - fire-and-forge
 ## Installation
 Install MySQL
 
-Run the following command in the NuGet Package Manager console to install Hangfire.MySqlStorage:
+Run the following command in the NuGet Package Manager console to install Hangfire.MySql.Core:
 
 ```
-Install-Package Hangfire.MySqlStorage
+Install-Package Hangfire.MySql.Core
 ```
 
 ## Usage
