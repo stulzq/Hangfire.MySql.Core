@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFrameworks>netstandard2.0</TargetFrameworks>
-    <Description>Hangfire的Mysql存储组件，支持.net core 1.1, .net core 2.0 ,.net standard 2.0。基于Hangfire.MySqlStorage，修复了一些bug，提供了.net standard 2.0支持。</Description>
+    <Description>Hangfire的Mysql存储组件，支持.net core 1.1, .net core 2.0 。基于Hangfire.MySqlStorage，修复了一些bug，提供了.net standard 2.0支持。</Description>
     <PackageId>Hangfire.MySql.Core</PackageId>
     <Product>Hangfire.MySql.Core</Product>
     <Company>stulzq</Company>
@@ -11,8 +11,8 @@
     <PackageProjectUrl>https://github.com/stulzq/Hangfire.MySql.Core</PackageProjectUrl>
     <Copyright>Copyright 2017</Copyright>
     <PackageTags>Hangfire MySql Hangfire.MySql Hangfire.MySql.Core</PackageTags>
-    <Version>2.0.0</Version>
-    <AssemblyVersion>2.0.0.0</AssemblyVersion>
+    <Version>2.1.0</Version>
+    <AssemblyVersion>2.1.0.0</AssemblyVersion>
   </PropertyGroup>
   <ItemGroup>
     <None Remove="Install.sql" />
@@ -22,7 +22,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="MySql.Data" Version="8.0.8-dmr" />
+    <PackageReference Include="MySqlConnector" Version="0.26.2" />
     <PackageReference Include="Newtonsoft.Json" Version="10.0.3" />
     <PackageReference Include="Dapper" Version="1.50.2" />
     <PackageReference Include="Hangfire.Core" Version="1.6.16" />
