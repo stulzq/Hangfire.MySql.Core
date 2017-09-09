@@ -11,10 +11,10 @@
     <PackageProjectUrl>https://github.com/stulzq/Hangfire.MySql.Core</PackageProjectUrl>
     <Copyright>Copyright 2017</Copyright>
     <PackageTags>Hangfire MySql Hangfire.MySql Hangfire.MySql.Core</PackageTags>
-    <Version>2.1.2</Version>
-    <AssemblyVersion>2.1.2.0</AssemblyVersion>
-    <AssemblyName>Hangfire.MySql</AssemblyName>
-    <RootNamespace>Hangfire.MySql</RootNamespace>
+    <Version>2.1.5</Version>
+    <AssemblyVersion>2.1.5.0</AssemblyVersion>
+    <AssemblyName>Hangfire.MySql.Core</AssemblyName>
+    <RootNamespace>Hangfire.MySql.Core</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
     <None Remove="Install.sql" />

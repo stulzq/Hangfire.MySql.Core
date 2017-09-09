@@ -5,7 +5,7 @@ using Hangfire.Logging;
 using Hangfire.Server;
 using MySql.Data.MySqlClient;
 
-namespace Hangfire.MySql
+namespace Hangfire.MySql.Core
 {
     internal class ExpirationManager : IServerComponent
     {

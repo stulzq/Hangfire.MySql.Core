@@ -1,4 +1,4 @@
-﻿namespace Hangfire.MySql.JobQueue
+﻿namespace Hangfire.MySql.Core.JobQueue
 {
     public class EnqueuedAndFetchedCountDto
     {

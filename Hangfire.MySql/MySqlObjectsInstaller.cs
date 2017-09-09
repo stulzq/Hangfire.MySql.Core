@@ -5,7 +5,7 @@ using Dapper;
 using Hangfire.Logging;
 using MySql.Data.MySqlClient;
 
-namespace Hangfire.MySql
+namespace Hangfire.MySql.Core
 {
     public static class MySqlObjectsInstaller
     {
@@ -22,7 +22,7 @@ namespace Hangfire.MySql
 
             Log.Info("Start installing Hangfire SQL objects...");
 
-            var script = GetStringResource("Hangfire.MySql.Install.sql");
+            var script = GetStringResource("Hangfire.MySql.Core.Install.sql");
 
             connection.Execute(script);
 

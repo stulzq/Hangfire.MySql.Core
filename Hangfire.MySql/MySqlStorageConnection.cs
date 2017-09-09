@@ -1,16 +1,15 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using Dapper;
 using Hangfire.Common;
 using Hangfire.Logging;
-using Hangfire.MySql.Entities;
+using Hangfire.MySql.Core.Entities;
 using Hangfire.Server;
 using Hangfire.Storage;
 
-namespace Hangfire.MySql
+namespace Hangfire.MySql.Core
 {
     public class MySqlStorageConnection : JobStorageConnection
     {

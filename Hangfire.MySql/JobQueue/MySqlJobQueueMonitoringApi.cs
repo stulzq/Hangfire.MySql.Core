@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Dapper;
 
-namespace Hangfire.MySql.JobQueue
+namespace Hangfire.MySql.Core.JobQueue
 {
     internal class MySqlJobQueueMonitoringApi : IPersistentJobQueueMonitoringApi
     {

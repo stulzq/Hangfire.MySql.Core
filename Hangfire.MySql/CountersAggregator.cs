@@ -4,7 +4,7 @@ using Dapper;
 using Hangfire.Logging;
 using Hangfire.Server;
 
-namespace Hangfire.MySql
+namespace Hangfire.MySql.Core
 {
     internal class CountersAggregator : IServerComponent
     {

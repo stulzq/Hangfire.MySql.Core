@@ -5,14 +5,14 @@ using System.Linq;
 using Dapper;
 using Hangfire.Annotations;
 using Hangfire.Common;
-using Hangfire.MySql.Entities;
-using Hangfire.MySql.JobQueue;
+using Hangfire.MySql.Core.Entities;
+using Hangfire.MySql.Core.JobQueue;
 using Hangfire.States;
 using Hangfire.Storage;
 using Hangfire.Storage.Monitoring;
 using MySql.Data.MySqlClient;
 
-namespace Hangfire.MySql.Monitoring
+namespace Hangfire.MySql.Core.Monitoring
 {
     internal class MySqlMonitoringApi : IMonitoringApi
     {

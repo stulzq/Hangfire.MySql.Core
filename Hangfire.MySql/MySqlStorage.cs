@@ -5,13 +5,13 @@ using System.Linq;
 using System.Text;
 using Hangfire.Annotations;
 using Hangfire.Logging;
-using Hangfire.MySql.JobQueue;
-using Hangfire.MySql.Monitoring;
+using Hangfire.MySql.Core.JobQueue;
+using Hangfire.MySql.Core.Monitoring;
 using Hangfire.Server;
 using Hangfire.Storage;
 using MySql.Data.MySqlClient;
 
-namespace Hangfire.MySql
+namespace Hangfire.MySql.Core
 {
     public class MySqlStorage : JobStorage, IDisposable
     {

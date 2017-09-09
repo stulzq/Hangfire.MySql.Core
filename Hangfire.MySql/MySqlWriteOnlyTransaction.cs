@@ -8,7 +8,7 @@ using Hangfire.States;
 using Hangfire.Storage;
 using MySql.Data.MySqlClient;
 
-namespace Hangfire.MySql
+namespace Hangfire.MySql.Core
 {
     internal class MySqlWriteOnlyTransaction : JobStorageTransaction
     {

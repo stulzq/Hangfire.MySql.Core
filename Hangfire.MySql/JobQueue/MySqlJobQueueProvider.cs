@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Hangfire.MySql.JobQueue
+namespace Hangfire.MySql.Core.JobQueue
 {
     internal class MySqlJobQueueProvider : IPersistentJobQueueProvider
     {

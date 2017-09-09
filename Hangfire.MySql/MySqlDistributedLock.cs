@@ -4,7 +4,7 @@ using System.Threading;
 using Dapper;
 using Hangfire.Logging;
 
-namespace Hangfire.MySql
+namespace Hangfire.MySql.Core
 {
     public class MySqlDistributedLock : IDisposable, IComparable
     {

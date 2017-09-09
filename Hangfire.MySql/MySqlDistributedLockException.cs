@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Hangfire.MySql
+namespace Hangfire.MySql.Core
 {
     public class MySqlDistributedLockException : Exception
     {
