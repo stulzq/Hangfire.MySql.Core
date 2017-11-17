@@ -69,9 +69,7 @@ namespace Hangfire.MySql.Core
 
         internal MySqlStorage(MySqlConnection existingConnection)
         {
-            if (existingConnection == null) throw new ArgumentNullException("existingConnection");
-
-            _existingConnection = existingConnection;
+	        _existingConnection = existingConnection ?? throw new ArgumentNullException("existingConnection");
             _options = new MySqlStorageOptions();
 
             InitializeQueueProviders();

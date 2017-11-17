@@ -21,9 +21,7 @@ namespace Hangfire.MySql.Core
 
         public MySqlWriteOnlyTransaction(MySqlStorage storage)
         {
-            if (storage == null) throw new ArgumentNullException("storage");
-
-            _storage = storage;
+	        _storage = storage ?? throw new ArgumentNullException("storage");
         }
 
         public override void ExpireJob(string jobId, TimeSpan expireIn)

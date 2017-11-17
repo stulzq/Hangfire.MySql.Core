@@ -17,11 +17,8 @@ namespace Hangfire.MySql.Core.JobQueue
         private readonly MySqlStorageOptions _options;
         public MySqlJobQueue(MySqlStorage storage, MySqlStorageOptions options)
         {
-            if (storage == null) throw new ArgumentNullException("storage");
-            if (options == null) throw new ArgumentNullException("options");
-
-            _storage = storage;
-            _options = options;
+	        _storage = storage ?? throw new ArgumentNullException("storage");
+            _options = options ?? throw new ArgumentNullException("options");
         }
 
         public IFetchedJob Dequeue(string[] queues, CancellationToken cancellationToken)
