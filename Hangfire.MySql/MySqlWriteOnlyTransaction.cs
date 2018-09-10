@@ -241,11 +241,11 @@ namespace Hangfire.MySql.Core
                 @"
 delete lst
 from List lst
-	inner join (SELECT tmp.Id, @rownum := @rownum + 1 AS rank
+	inner join (SELECT tmp.Id, @rownum := @rownum + 1 AS rankvalue
 		  		FROM List tmp, 
        				(SELECT @rownum := 0) r ) ranked on ranked.Id = lst.Id
 where lst.Key = @key
-    and ranked.rank not between @start and @end",
+    and ranked.rankvalue not between @start and @end",
                 new { key = key, start = keepStartingFrom + 1, end = keepEndingAt + 1 }));
         }
 
