@@ -12,7 +12,7 @@ namespace Hangfire.MySql.Core
         private static readonly ILog Log = LogProvider.GetLogger(typeof(MySqlStorage));
         public static void Install(MySqlConnection connection)
         {
-            if (connection == null) throw new ArgumentNullException("connection");
+            if (connection == null) throw new ArgumentNullException(nameof(connection));
 
             if (TablesExists(connection))
             {
@@ -46,10 +46,8 @@ namespace Hangfire.MySql.Core
             {
                 if (stream == null)
                 {
-                    throw new InvalidOperationException(String.Format(
-                        "Requested resource `{0}` was not found in the assembly `{1}`.",
-                        resourceName,
-                        assembly));
+                    throw new InvalidOperationException(
+                        $"Requested resource `{resourceName}` was not found in the assembly `{assembly}`.");
                 }
 
                 using (var reader = new StreamReader(stream))

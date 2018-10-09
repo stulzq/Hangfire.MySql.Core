@@ -21,7 +21,7 @@ namespace Hangfire.MySql.Core
 
         public MySqlWriteOnlyTransaction(MySqlStorage storage)
         {
-	        _storage = storage ?? throw new ArgumentNullException("storage");
+	        _storage = storage ?? throw new ArgumentNullException(nameof(storage));
         }
 
         public override void ExpireJob(string jobId, TimeSpan expireIn)
@@ -60,7 +60,7 @@ namespace Hangfire.MySql.Core
                 "update Job set StateId = last_insert_id(), StateName = @name where Id = @id;",
                 new
                 {
-                    jobId = jobId,
+                    jobId,
                     name = state.Name,
                     reason = state.Reason,
                     createdAt = DateTime.UtcNow,
@@ -79,7 +79,7 @@ namespace Hangfire.MySql.Core
                 "values (@jobId, @name, @reason, @createdAt, @data)",
                 new
                 {
-                    jobId = jobId,
+                    jobId,
                     name = state.Name,
                     reason = state.Reason,
                     createdAt = DateTime.UtcNow,
@@ -164,14 +164,14 @@ namespace Hangfire.MySql.Core
         {
             Logger.TraceFormat("AddRangeToSet key={0}", key);
 
-            if (key == null) throw new ArgumentNullException("key");
-            if (items == null) throw new ArgumentNullException("items");
+            if (key == null) throw new ArgumentNullException(nameof(key));
+            if (items == null) throw new ArgumentNullException(nameof(items));
 
             AcquireSetLock();
             QueueCommand(x => 
                 x.Execute(
                     "insert into `Set` (`Key`, Value, Score) values (@key, @value, 0.0)", 
-                    items.Select(value => new { key = key, value = value }).ToList()));
+                    items.Select(value => new {key, value }).ToList()));
         }
 
 
@@ -189,13 +189,13 @@ namespace Hangfire.MySql.Core
         {
             Logger.TraceFormat("ExpireSet key={0} expirein={1}", key, expireIn);
 
-            if (key == null) throw new ArgumentNullException("key");
+            if (key == null) throw new ArgumentNullException(nameof(key));
 
             AcquireSetLock();
             QueueCommand(x => 
                 x.Execute(
                     "update `Set` set ExpireAt = @expireAt where `Key` = @key", 
-                    new { key = key, expireAt = DateTime.UtcNow.Add(expireIn) }));
+                    new {key, expireAt = DateTime.UtcNow.Add(expireIn) }));
         }
 
         public override void InsertToList(string key, string value)
@@ -211,7 +211,7 @@ namespace Hangfire.MySql.Core
 
         public override void ExpireList(string key, TimeSpan expireIn)
         {
-            if (key == null) throw new ArgumentNullException("key");
+            if (key == null) throw new ArgumentNullException(nameof(key));
 
             Logger.TraceFormat("ExpireList key={0} expirein={1}", key, expireIn);
 
@@ -219,7 +219,7 @@ namespace Hangfire.MySql.Core
             QueueCommand(x => 
                 x.Execute(
                     "update List set ExpireAt = @expireAt where `Key` = @key", 
-                    new { key = key, expireAt = DateTime.UtcNow.Add(expireIn) }));
+                    new {key, expireAt = DateTime.UtcNow.Add(expireIn) }));
         }
 
         public override void RemoveFromList(string key, string value)
@@ -246,63 +246,63 @@ from List lst
        				(SELECT @rownum := 0) r ) ranked on ranked.Id = lst.Id
 where lst.Key = @key
     and ranked.rankvalue not between @start and @end",
-                new { key = key, start = keepStartingFrom + 1, end = keepEndingAt + 1 }));
+                new {key, start = keepStartingFrom + 1, end = keepEndingAt + 1 }));
         }
 
         public override void PersistHash(string key)
         {
             Logger.TraceFormat("PersistHash key={0} ", key);
 
-            if (key == null) throw new ArgumentNullException("key");
+            if (key == null) throw new ArgumentNullException(nameof(key));
 
             AcquireHashLock();
             QueueCommand(x => 
                 x.Execute(
-                    "update Hash set ExpireAt = null where `Key` = @key", new { key = key }));
+                    "update Hash set ExpireAt = null where `Key` = @key", new {key }));
         }
 
         public override void PersistSet(string key)
         {
             Logger.TraceFormat("PersistSet key={0} ", key);
 
-            if (key == null) throw new ArgumentNullException("key");
+            if (key == null) throw new ArgumentNullException(nameof(key));
 
             AcquireSetLock();
             QueueCommand(x => 
                 x.Execute(
-                    "update `Set` set ExpireAt = null where `Key` = @key", new { key = key }));
+                    "update `Set` set ExpireAt = null where `Key` = @key", new {key }));
         }
 
         public override void RemoveSet(string key)
         {
             Logger.TraceFormat("RemoveSet key={0} ", key);
 
-            if (key == null) throw new ArgumentNullException("key");
+            if (key == null) throw new ArgumentNullException(nameof(key));
 
             AcquireSetLock();
             QueueCommand(x => 
                 x.Execute(
-                    "delete from `Set` where `Key` = @key", new { key = key }));
+                    "delete from `Set` where `Key` = @key", new {key }));
         }
 
         public override void PersistList(string key)
         {
             Logger.TraceFormat("PersistList key={0} ", key);
 
-            if (key == null) throw new ArgumentNullException("key");
+            if (key == null) throw new ArgumentNullException(nameof(key));
 
             AcquireListLock();
             QueueCommand(x => 
                 x.Execute(
-                    "update List set ExpireAt = null where `Key` = @key", new { key = key }));
+                    "update List set ExpireAt = null where `Key` = @key", new {key }));
         }
 
         public override void SetRangeInHash(string key, IEnumerable<KeyValuePair<string, string>> keyValuePairs)
         {
             Logger.TraceFormat("SetRangeInHash key={0} ", key);
 
-            if (key == null) throw new ArgumentNullException("key");
-            if (keyValuePairs == null) throw new ArgumentNullException("keyValuePairs");
+            if (key == null) throw new ArgumentNullException(nameof(key));
+            if (keyValuePairs == null) throw new ArgumentNullException(nameof(keyValuePairs));
 
             AcquireHashLock();
             QueueCommand(x => 
@@ -310,27 +310,27 @@ where lst.Key = @key
                     "insert into Hash (`Key`, Field, Value) " +
                     "values (@key, @field, @value) " +
                     "on duplicate key update Value = @value",
-                    keyValuePairs.Select(y => new { key = key, field = y.Key, value = y.Value })));
+                    keyValuePairs.Select(y => new {key, field = y.Key, value = y.Value })));
         }
 
         public override void ExpireHash(string key, TimeSpan expireIn)
         {
             Logger.TraceFormat("ExpireHash key={0} ", key);
 
-            if (key == null) throw new ArgumentNullException("key");
+            if (key == null) throw new ArgumentNullException(nameof(key));
 
             AcquireHashLock();
             QueueCommand(x => 
                 x.Execute(
                     "update `Hash` set ExpireAt = @expireAt where `Key` = @key", 
-                    new { key = key, expireAt = DateTime.UtcNow.Add(expireIn) }));
+                    new {key, expireAt = DateTime.UtcNow.Add(expireIn) }));
         }
 
         public override void RemoveHash(string key)
         {
             Logger.TraceFormat("RemoveHash key={0} ", key);
 
-            if (key == null) throw new ArgumentNullException("key");
+            if (key == null) throw new ArgumentNullException(nameof(key));
 
             AcquireHashLock();
             QueueCommand(x => x.Execute(
@@ -355,35 +355,36 @@ where lst.Key = @key
         
         private void AcquireJobLock()
         {
-            AcquireLock(String.Format("Job"));
+            AcquireLock("Job");
         }
 
         private void AcquireSetLock()
         {
-            AcquireLock(String.Format("Set"));
+            AcquireLock("Set");
         }
         
         private void AcquireListLock()
         {
-            AcquireLock(String.Format("List"));
+            AcquireLock("List");
         }
 
         private void AcquireHashLock()
         {
-            AcquireLock(String.Format("Hash"));
+            AcquireLock("Hash");
         }
         
         private void AcquireStateLock()
         {
-            AcquireLock(String.Format("State"));
+            AcquireLock("State");
         }
 
         private void AcquireCounterLock()
         {
-            AcquireLock(String.Format("Counter"));
+            AcquireLock("Counter");
         }
         private void AcquireLock(string resource)
         {
+            // TODO: Is this an not implement method?
         }
     }
 }

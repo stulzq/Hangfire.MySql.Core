@@ -23,20 +23,18 @@ namespace Hangfire.MySql.Core
 
         public TimeSpan QueuePollInterval
         {
-            get { return _queuePollInterval; }
+            get => _queuePollInterval;
             set
             {
-                var message = String.Format(
-                    "The QueuePollInterval property value should be positive. Given: {0}.",
-                    value);
+                var message = $"The QueuePollInterval property value should be positive. Given: {value}.";
 
                 if (value == TimeSpan.Zero)
                 {
-                    throw new ArgumentException(message, "value");
+                    throw new ArgumentException(message, nameof(value));
                 }
                 if (value != value.Duration())
                 {
-                    throw new ArgumentException(message, "value");
+                    throw new ArgumentException(message, nameof(value));
                 }
 
                 _queuePollInterval = value;

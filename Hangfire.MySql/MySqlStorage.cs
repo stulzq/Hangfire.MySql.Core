@@ -15,7 +15,7 @@ namespace Hangfire.MySql.Core
 {
     public class MySqlStorage : JobStorage, IDisposable
     {
-        private static readonly ILog Logger = LogProvider.GetLogger(typeof (MySqlStorage));
+        private static readonly ILog Logger = LogProvider.GetLogger(typeof(MySqlStorage));
 
         private readonly string _connectionString;
         private readonly MySqlConnection _existingConnection;
@@ -30,20 +30,19 @@ namespace Hangfire.MySql.Core
 
         public MySqlStorage(string connectionString, MySqlStorageOptions options)
         {
-            if (connectionString == null) throw new ArgumentNullException("connectionString");
-            if (options == null) throw new ArgumentNullException("options");
+            if (connectionString == null) throw new ArgumentNullException(nameof(connectionString));
+            if (options == null) throw new ArgumentNullException(nameof(options));
 
             if (IsConnectionString(connectionString))
             {
-                _connectionString = connectionString;
+                _connectionString = ApplyAllowUserVariablesProperty(connectionString);
             }
             else
             {
                 throw new ArgumentException(
-                    string.Format(
-                        "Could not find connection string with name '{0}' in application config file",
-                        connectionString));
+                    $"Could not find connection string with name '{connectionString}' in application config file");
             }
+
             _options = options;
 
             if (options.PrepareSchemaIfNecessary)
@@ -59,17 +58,14 @@ namespace Hangfire.MySql.Core
 
         private string ApplyAllowUserVariablesProperty(string connectionString)
         {
-            if (connectionString.ToLower().Contains("allow user variables"))
-            {
-                return connectionString;
-            }
-
-            return connectionString + ";Allow User Variables=True;";
+            return connectionString.ToLower().Contains("allow user variables")
+                ? connectionString
+                : $"{connectionString};Allow User Variables=True;";
         }
 
         internal MySqlStorage(MySqlConnection existingConnection)
         {
-	        _existingConnection = existingConnection ?? throw new ArgumentNullException("existingConnection");
+            _existingConnection = existingConnection ?? throw new ArgumentNullException(nameof(existingConnection));
             _options = new MySqlStorageOptions();
 
             InitializeQueueProviders();
@@ -77,7 +73,7 @@ namespace Hangfire.MySql.Core
 
         private void InitializeQueueProviders()
         {
-            QueueProviders = 
+            QueueProviders =
                 new PersistentJobQueueProviderCollection(
                     new MySqlJobQueueProvider(this, _options));
         }
@@ -100,14 +96,14 @@ namespace Hangfire.MySql.Core
 
             try
             {
-                var parts = _connectionString.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries)
-                    .Select(x => x.Split(new[] { '=' }, StringSplitOptions.RemoveEmptyEntries))
-                    .Select(x => new { Key = x[0].Trim(), Value = x.Length>1? x[1].Trim():"" })
+                var parts = _connectionString.Split(new[] {';'}, StringSplitOptions.RemoveEmptyEntries)
+                    .Select(x => x.Split(new[] {'='}, StringSplitOptions.RemoveEmptyEntries))
+                    .Select(x => new {Key = x[0].Trim(), Value = x.Length > 1 ? x[1].Trim() : ""})
                     .ToDictionary(x => x.Key, x => x.Value, StringComparer.OrdinalIgnoreCase);
 
                 var builder = new StringBuilder();
 
-                foreach (var alias in new[] { "Data Source", "Server", "Address", "Addr", "Network Address" })
+                foreach (var alias in new[] {"Data Source", "Server", "Address", "Addr", "Network Address"})
                 {
                     if (parts.ContainsKey(alias))
                     {
@@ -118,7 +114,7 @@ namespace Hangfire.MySql.Core
 
                 if (builder.Length != 0) builder.Append("@");
 
-                foreach (var alias in new[] { "Database", "Initial Catalog" })
+                foreach (var alias in new[] {"Database", "Initial Catalog"})
                 {
                     if (parts.ContainsKey(alias))
                     {
@@ -128,7 +124,7 @@ namespace Hangfire.MySql.Core
                 }
 
                 return builder.Length != 0
-                    ? String.Format("Server: {0}", builder)
+                    ? $"Server: {builder}"
                     : canNotParseMessage;
             }
             catch (Exception ex)
@@ -163,7 +159,7 @@ namespace Hangfire.MySql.Core
         }
 
         internal T UseTransaction<T>(
-           [InstantHandle] Func<MySqlConnection, T> func, IsolationLevel? isolationLevel)
+            [InstantHandle] Func<MySqlConnection, T> func, IsolationLevel? isolationLevel)
         {
             return UseConnection(connection =>
             {
@@ -172,7 +168,7 @@ namespace Hangfire.MySql.Core
                 return result;
             });
         }
-        
+
         internal void UseConnection([InstantHandle] Action<MySqlConnection> action)
         {
             UseConnection(connection =>
@@ -206,7 +202,7 @@ namespace Hangfire.MySql.Core
 
             var connection = new MySqlConnection(_connectionString);
             connection.Open();
-            
+
             return connection;
         }
 
@@ -217,6 +213,7 @@ namespace Hangfire.MySql.Core
                 connection.Dispose();
             }
         }
+
         public void Dispose()
         {
         }

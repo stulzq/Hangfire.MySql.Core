@@ -17,17 +17,17 @@ namespace Hangfire.MySql.Core.JobQueue
         private readonly MySqlStorageOptions _options;
         public MySqlJobQueue(MySqlStorage storage, MySqlStorageOptions options)
         {
-	        _storage = storage ?? throw new ArgumentNullException("storage");
-            _options = options ?? throw new ArgumentNullException("options");
+	        _storage = storage ?? throw new ArgumentNullException(nameof(storage));
+            _options = options ?? throw new ArgumentNullException(nameof(options));
         }
 
         public IFetchedJob Dequeue(string[] queues, CancellationToken cancellationToken)
         {
-            if (queues == null) throw new ArgumentNullException("queues");
-            if (queues.Length == 0) throw new ArgumentException("Queue array must be non-empty.", "queues");
+            if (queues == null) throw new ArgumentNullException(nameof(queues));
+            if (queues.Length == 0) throw new ArgumentException("Queue array must be non-empty.", nameof(queues));
 
             FetchedJob fetchedJob = null;
-            MySqlConnection connection = null;
+            MySqlConnection connection;
 
             do
             {
@@ -47,7 +47,7 @@ namespace Hangfire.MySql.Core.JobQueue
                             "LIMIT 1;",
                             new
                             {
-                                queues = queues,
+                                queues,
                                 timeout = _options.InvisibilityTimeout.Negate().TotalSeconds,
                                 fetchToken = token
                             });

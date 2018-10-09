@@ -21,9 +21,7 @@ namespace Hangfire.MySql.Core.Monitoring
 
         public MySqlMonitoringApi([NotNull] MySqlStorage storage, int? jobListLimit)
         {
-            if (storage == null) throw new ArgumentNullException("storage");
-
-            _storage = storage;
+            _storage = storage ?? throw new ArgumentNullException(nameof(storage));
             _jobListLimit = jobListLimit;
         }
         public IList<QueueWithTopEnqueuedJobsDto> Queues()
@@ -155,7 +153,7 @@ select sum(s.`Value`) from (
             return statistics;
         }
 
-        public JobList<EnqueuedJobDto> EnqueuedJobs(string queue, int @from, int perPage)
+        public JobList<EnqueuedJobDto> EnqueuedJobs(string queue, int from, int perPage)
         {
             var queueApi = GetQueueApi(queue);
             var enqueuedJobIds = queueApi.GetEnqueuedJobIds(queue, from, perPage);
@@ -163,7 +161,7 @@ select sum(s.`Value`) from (
             return UseConnection(connection => EnqueuedJobs(connection, enqueuedJobIds));
         }
 
-        public JobList<FetchedJobDto> FetchedJobs(string queue, int @from, int perPage)
+        public JobList<FetchedJobDto> FetchedJobs(string queue, int from, int perPage)
         {
             var queueApi = GetQueueApi(queue);
             var fetchedJobIds = queueApi.GetFetchedJobIds(queue, from, perPage);
@@ -171,7 +169,7 @@ select sum(s.`Value`) from (
             return UseConnection(connection => FetchedJobs(connection, fetchedJobIds));
         }
 
-        public JobList<ProcessingJobDto> ProcessingJobs(int @from, int count)
+        public JobList<ProcessingJobDto> ProcessingJobs(int from, int count)
         {
             return UseConnection(connection => GetJobs(
                 connection,
@@ -185,7 +183,7 @@ select sum(s.`Value`) from (
                 }));
         }
 
-        public JobList<ScheduledJobDto> ScheduledJobs(int @from, int count)
+        public JobList<ScheduledJobDto> ScheduledJobs(int from, int count)
         {
             return UseConnection(connection => GetJobs(
                 connection,
@@ -199,7 +197,7 @@ select sum(s.`Value`) from (
                 }));
         }
 
-        public JobList<SucceededJobDto> SucceededJobs(int @from, int count)
+        public JobList<SucceededJobDto> SucceededJobs(int from, int count)
         {
             return UseConnection(connection => GetJobs(
                 connection,
@@ -217,7 +215,7 @@ select sum(s.`Value`) from (
                 }));
         }
 
-        public JobList<FailedJobDto> FailedJobs(int @from, int count)
+        public JobList<FailedJobDto> FailedJobs(int from, int count)
         {
             return UseConnection(connection => GetJobs(
                 connection,
@@ -235,7 +233,7 @@ select sum(s.`Value`) from (
                 }));
         }
 
-        public JobList<DeletedJobDto> DeletedJobs(int @from, int count)
+        public JobList<DeletedJobDto> DeletedJobs(int from, int count)
         {
             return UseConnection(connection => GetJobs(
                 connection,
@@ -365,7 +363,7 @@ select sum(s.`Value`) from (
             var jobs = 
                 connection.Query<SqlJob>(
                     jobsSql,
-                    new { stateName = stateName, start = @from + 1, end = @from + count })
+                    new {stateName, start = from + 1, end = from + count })
                     .ToList();
 
             return DeserializeJobs(jobs, selector);
@@ -420,7 +418,7 @@ select sum(s.`Value`) from (
                 endDate = endDate.AddDays(-1);
             }
 
-            var keyMaps = dates.ToDictionary(x => String.Format("stats:{0}:{1}", type, x.ToString("yyyy-MM-dd")), x => x);
+            var keyMaps = dates.ToDictionary(x => $"stats:{type}:{x:yyyy-MM-dd}", x => x);
 
             return GetTimelineStats(connection, keyMaps);
         }
@@ -495,7 +493,7 @@ where j.Id in @jobIds";
 
             var jobs = connection.Query<SqlJob>(
                 fetchedJobsSql,
-                new { jobIds = jobIds })
+                new {jobIds })
                 .ToList();
 
             var result = new List<KeyValuePair<string, FetchedJobDto>>(jobs.Count);
@@ -507,7 +505,7 @@ where j.Id in @jobIds";
                     new FetchedJobDto
                     {
                         Job = DeserializeJob(job.InvocationData, job.Arguments),
-                        State = job.StateName,
+                        State = job.StateName
                     }));
             }
 
@@ -526,7 +524,7 @@ where j.Id in @jobIds";
                 endDate = endDate.AddHours(-1);
             }
 
-            var keyMaps = dates.ToDictionary(x => String.Format("stats:{0}:{1}", type, x.ToString("yyyy-MM-dd-HH")), x => x);
+            var keyMaps = dates.ToDictionary(x => $"stats:{type}:{x:yyyy-MM-dd-HH}", x => x);
 
             return GetTimelineStats(connection, keyMaps);
         }

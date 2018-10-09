@@ -15,8 +15,7 @@ namespace Hangfire.MySql.Core.JobQueue
         private readonly MySqlStorage _storage;
         public MySqlJobQueueMonitoringApi(MySqlStorage storage)
         {
-            if (storage == null) throw new ArgumentNullException("storage");
-            _storage = storage;
+            _storage = storage ?? throw new ArgumentNullException(nameof(storage));
         }
 
         public IEnumerable<string> GetQueues()
@@ -38,7 +37,7 @@ namespace Hangfire.MySql.Core.JobQueue
             }
         }
 
-        public IEnumerable<int> GetEnqueuedJobIds(string queue, int @from, int perPage)
+        public IEnumerable<int> GetEnqueuedJobIds(string queue, int from, int perPage)
         {
             string sqlQuery = @"
 SET @rank=0;
@@ -53,10 +52,10 @@ where r.rankvalue between @start and @end;";
             return _storage.UseConnection(connection =>
                 connection.Query<int>(
                     sqlQuery,
-                    new {queue = queue, start = @from + 1, end = @from + perPage}));
+                    new {queue, start = from + 1, end = from + perPage}));
         }
 
-        public IEnumerable<int> GetFetchedJobIds(string queue, int @from, int perPage)
+        public IEnumerable<int> GetFetchedJobIds(string queue, int from, int perPage)
         {
             return Enumerable.Empty<int>();
         }
@@ -67,7 +66,7 @@ where r.rankvalue between @start and @end;";
             {
                 var result = 
                     connection.Query<int>(
-                        "select count(Id) from JobQueue where Queue = @queue", new { queue = queue }).Single();
+                        "select count(Id) from JobQueue where Queue = @queue", new {queue }).Single();
 
                 return new EnqueuedAndFetchedCountDto
                 {

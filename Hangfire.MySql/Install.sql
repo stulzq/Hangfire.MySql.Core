@@ -90,21 +90,6 @@ CREATE TABLE `JobQueue` (
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 -- ----------------------------
--- Table structure for `JobState`
--- ----------------------------
-CREATE TABLE `JobState` (
-  `Id` int(11) NOT NULL AUTO_INCREMENT,
-  `JobId` int(11) NOT NULL,
-  `Name` varchar(20) NOT NULL,
-  `Reason` varchar(100) DEFAULT NULL,
-  `CreatedAt` datetime(6) NOT NULL,
-  `Data` longtext,
-  PRIMARY KEY (`Id`),
-  KEY `FK_JobState_Job` (`JobId`),
-  CONSTRAINT `FK_JobState_Job` FOREIGN KEY (`JobId`) REFERENCES `Job` (`Id`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
-
--- ----------------------------
 -- Table structure for `Server`
 -- ----------------------------
 CREATE TABLE `Server` (

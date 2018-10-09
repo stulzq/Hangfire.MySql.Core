@@ -18,8 +18,7 @@ namespace Hangfire.MySql.Core
         private readonly MySqlStorage _storage;
         public MySqlStorageConnection(MySqlStorage storage)
         {
-            if (storage == null) throw new ArgumentNullException("storage");
-            _storage = storage;
+            _storage = storage ?? throw new ArgumentNullException(nameof(storage));
         }
 
         public override IWriteOnlyTransaction CreateWriteTransaction()
@@ -34,8 +33,8 @@ namespace Hangfire.MySql.Core
 
         public override string CreateExpiredJob(Job job, IDictionary<string, string> parameters, DateTime createdAt, TimeSpan expireIn)
         {
-            if (job == null) throw new ArgumentNullException("job");
-            if (parameters == null) throw new ArgumentNullException("parameters");
+            if (job == null) throw new ArgumentNullException(nameof(job));
+            if (parameters == null) throw new ArgumentNullException(nameof(parameters));
 
             var invocationData = InvocationData.Serialize(job);
 
@@ -51,7 +50,7 @@ namespace Hangfire.MySql.Core
                     {
                         invocationData = JobHelper.ToJson(invocationData),
                         arguments = invocationData.Arguments,
-                        createdAt = createdAt,
+                        createdAt,
                         expireAt = createdAt.Add(expireIn)
                     }).Single().ToString();
 
@@ -63,7 +62,7 @@ namespace Hangfire.MySql.Core
                     {
                         parameterArray[parameterIndex++] = new
                         {
-                            jobId = jobId,
+                            jobId,
                             name = parameter.Key,
                             value = parameter.Value
                         };
@@ -80,7 +79,7 @@ namespace Hangfire.MySql.Core
 
         public override IFetchedJob FetchNextJob(string[] queues, CancellationToken cancellationToken)
         {
-            if (queues == null || queues.Length == 0) throw new ArgumentNullException("queues");
+            if (queues == null || queues.Length == 0) throw new ArgumentNullException(nameof(queues));
 
             var providers = queues
                 .Select(queue => _storage.QueueProviders.GetProvider(queue))
@@ -89,9 +88,8 @@ namespace Hangfire.MySql.Core
 
             if (providers.Length != 1)
             {
-                throw new InvalidOperationException(String.Format(
-                    "Multiple provider instances registered for queues: {0}. You should choose only one type of persistent queues per server instance.",
-                    String.Join(", ", queues)));
+                throw new InvalidOperationException(
+                    $"Multiple provider instances registered for queues: {String.Join(", ", queues)}. You should choose only one type of persistent queues per server instance.");
             }
 
             var persistentQueue = providers[0].GetJobQueue();
@@ -100,8 +98,8 @@ namespace Hangfire.MySql.Core
 
         public override void SetJobParameter(string id, string name, string value)
         {
-            if (id == null) throw new ArgumentNullException("id");
-            if (name == null) throw new ArgumentNullException("name");
+            if (id == null) throw new ArgumentNullException(nameof(id));
+            if (name == null) throw new ArgumentNullException(nameof(name));
 
             _storage.UseConnection(connection =>
             {
@@ -115,20 +113,20 @@ namespace Hangfire.MySql.Core
 
         public override string GetJobParameter(string id, string name)
         {
-            if (id == null) throw new ArgumentNullException("id");
-            if (name == null) throw new ArgumentNullException("name");
+            if (id == null) throw new ArgumentNullException(nameof(id));
+            if (name == null) throw new ArgumentNullException(nameof(name));
 
             return _storage.UseConnection(connection => 
                 connection.Query<string>(
                     "select Value " +
                     "from JobParameter " +
                     "where JobId = @id and Name = @name",
-                    new {id = id, name = name}).SingleOrDefault());
+                    new {id, name}).SingleOrDefault());
         }
 
         public override JobData GetJobData(string jobId)
         {
-            if (jobId == null) throw new ArgumentNullException("jobId");
+            if (jobId == null) throw new ArgumentNullException(nameof(jobId));
 
             return _storage.UseConnection(connection =>
             {
@@ -170,7 +168,7 @@ namespace Hangfire.MySql.Core
 
         public override StateData GetStateData(string jobId)
         {
-            if (jobId == null) throw new ArgumentNullException("jobId");
+            if (jobId == null) throw new ArgumentNullException(nameof(jobId));
 
             return _storage.UseConnection(connection =>
             {
@@ -179,7 +177,7 @@ namespace Hangfire.MySql.Core
                         "select s.Name, s.Reason, s.Data " +
                         "from State s inner join Job j on j.StateId = s.Id " +
                         "where j.Id = @jobId", 
-                        new { jobId = jobId }).SingleOrDefault();
+                        new {jobId }).SingleOrDefault();
                 if (sqlState == null)
                 {
                     return null;
@@ -200,8 +198,8 @@ namespace Hangfire.MySql.Core
 
         public override void AnnounceServer(string serverId, ServerContext context)
         {
-            if (serverId == null) throw new ArgumentNullException("serverId");
-            if (context == null) throw new ArgumentNullException("context");
+            if (serverId == null) throw new ArgumentNullException(nameof(serverId));
+            if (context == null) throw new ArgumentNullException(nameof(context));
 
             _storage.UseConnection(connection =>
             {
@@ -225,7 +223,7 @@ namespace Hangfire.MySql.Core
 
         public override void RemoveServer(string serverId)
         {
-            if (serverId == null) throw new ArgumentNullException("serverId");
+            if (serverId == null) throw new ArgumentNullException(nameof(serverId));
 
             _storage.UseConnection(connection =>
             {
@@ -237,7 +235,7 @@ namespace Hangfire.MySql.Core
 
         public override void Heartbeat(string serverId)
         {
-            if (serverId == null) throw new ArgumentNullException("serverId");
+            if (serverId == null) throw new ArgumentNullException(nameof(serverId));
 
             _storage.UseConnection(connection =>
             {
@@ -251,7 +249,7 @@ namespace Hangfire.MySql.Core
         {
             if (timeOut.Duration() != timeOut)
             {
-                throw new ArgumentException("The `timeOut` value must be positive.", "timeOut");
+                throw new ArgumentException("The `timeOut` value must be positive.", nameof(timeOut));
             }
 
             return
@@ -263,18 +261,18 @@ namespace Hangfire.MySql.Core
 
         public override long GetSetCount(string key)
         {
-            if (key == null) throw new ArgumentNullException("key");
+            if (key == null) throw new ArgumentNullException(nameof(key));
 
             return
                 _storage.UseConnection(connection =>
                     connection.Query<int>(
                         "select count(`Key`) from `Set` where `Key` = @key",
-                        new {key = key}).First());
+                        new {key}).First());
         }
 
         public override List<string> GetRangeFromSet(string key, int startingFrom, int endingAt)
         {
-            if (key == null) throw new ArgumentNullException("key");
+            if (key == null) throw new ArgumentNullException(nameof(key));
             
             return _storage.UseConnection(connection =>
                 connection
@@ -288,13 +286,13 @@ from (
         order by Id
      ) ranked
 where ranked.rankvalue between @startingFrom and @endingAt",
-                        new {key = key, startingFrom = startingFrom + 1, endingAt = endingAt + 1})
+                        new {key, startingFrom = startingFrom + 1, endingAt = endingAt + 1})
                     .ToList());
         }
 
         public override HashSet<string> GetAllItemsFromSet(string key)
         {
-            if (key == null) throw new ArgumentNullException("key");
+            if (key == null) throw new ArgumentNullException(nameof(key));
 
             return
                 _storage.UseConnection(connection =>
@@ -309,7 +307,7 @@ where ranked.rankvalue between @startingFrom and @endingAt",
 
         public override string GetFirstByLowestScoreFromSet(string key, double fromScore, double toScore)
         {
-            if (key == null) throw new ArgumentNullException("key");
+            if (key == null) throw new ArgumentNullException(nameof(key));
             if (toScore < fromScore) 
                 throw new ArgumentException("The `toScore` value must be higher or equal to the `fromScore` value.");
 
@@ -327,7 +325,7 @@ where ranked.rankvalue between @startingFrom and @endingAt",
 
         public override long GetCounter(string key)
         {
-            if (key == null) throw new ArgumentNullException("key");
+            if (key == null) throw new ArgumentNullException(nameof(key));
 
             string query = @"
 select sum(s.`Value`) from (select sum(`Value`) as `Value` from Counter
@@ -339,31 +337,31 @@ where `Key` = @key) as s";
             return 
                 _storage
                     .UseConnection(connection =>
-                        connection.Query<long?>(query, new { key = key }).Single() ?? 0);
+                        connection.Query<long?>(query, new {key }).Single() ?? 0);
         }
 
         public override long GetHashCount(string key)
         {
-            if (key == null) throw new ArgumentNullException("key");
+            if (key == null) throw new ArgumentNullException(nameof(key));
 
             return 
                 _storage
                     .UseConnection(connection => 
                         connection.Query<long>(
                             "select count(Id) from Hash where `Key` = @key", 
-                            new { key = key }).Single());
+                            new {key }).Single());
         }
 
         public override TimeSpan GetHashTtl(string key)
         {
-            if (key == null) throw new ArgumentNullException("key");
+            if (key == null) throw new ArgumentNullException(nameof(key));
 
             return _storage.UseConnection(connection =>
             {
                 var result = 
                     connection.Query<DateTime?>(
                         "select min(ExpireAt) from Hash where `Key` = @key", 
-                        new { key = key }).Single();
+                        new {key }).Single();
                 if (!result.HasValue) return TimeSpan.FromSeconds(-1);
 
                 return result.Value - DateTime.UtcNow;
@@ -372,26 +370,26 @@ where `Key` = @key) as s";
 
         public override long GetListCount(string key)
         {
-            if (key == null) throw new ArgumentNullException("key");
+            if (key == null) throw new ArgumentNullException(nameof(key));
 
             return 
                 _storage
                     .UseConnection(connection => 
                         connection.Query<long>(
                             "select count(Id) from List where `Key` = @key", 
-                            new { key = key }).Single());
+                            new {key }).Single());
         }
 
         public override TimeSpan GetListTtl(string key)
         {
-            if (key == null) throw new ArgumentNullException("key");
+            if (key == null) throw new ArgumentNullException(nameof(key));
 
             return _storage.UseConnection(connection =>
             {
                 var result = 
                     connection.Query<DateTime?>(
                         "select min(ExpireAt) from List where `Key` = @key", 
-                        new { key = key }).Single();
+                        new {key }).Single();
                 if (!result.HasValue) return TimeSpan.FromSeconds(-1);
 
                 return result.Value - DateTime.UtcNow;
@@ -400,20 +398,20 @@ where `Key` = @key) as s";
 
         public override string GetValueFromHash(string key, string name)
         {
-            if (key == null) throw new ArgumentNullException("key");
-            if (name == null) throw new ArgumentNullException("name");
+            if (key == null) throw new ArgumentNullException(nameof(key));
+            if (name == null) throw new ArgumentNullException(nameof(name));
 
             return 
                 _storage
                     .UseConnection(connection => 
                         connection.Query<string>(
                             "select `Value` from Hash where `Key` = @key and `Field` = @field", 
-                            new { key = key, field = name }).SingleOrDefault());
+                            new {key, field = name }).SingleOrDefault());
         }
 
         public override List<string> GetRangeFromList(string key, int startingFrom, int endingAt)
         {
-            if (key == null) throw new ArgumentNullException("key");
+            if (key == null) throw new ArgumentNullException(nameof(key));
 
             string query = @"
 select `Value` 
@@ -430,25 +428,25 @@ where ranked.rankvalue between @startingFrom and @endingAt";
                     .UseConnection(connection =>
                         connection.Query<string>(
                             query,
-                            new {key = key, startingFrom = startingFrom + 1, endingAt = endingAt + 1})
+                            new {key, startingFrom = startingFrom + 1, endingAt = endingAt + 1})
                             .ToList());
         }
 
         public override List<string> GetAllItemsFromList(string key)
         {
-            if (key == null) throw new ArgumentNullException("key");
+            if (key == null) throw new ArgumentNullException(nameof(key));
 
             string query = @"
 select `Value` from List
 where `Key` = @key
 order by Id desc";
 
-            return _storage.UseConnection(connection => connection.Query<string>(query, new { key = key }).ToList());
+            return _storage.UseConnection(connection => connection.Query<string>(query, new {key }).ToList());
         }
 
         public override TimeSpan GetSetTtl(string key)
         {
-            if (key == null) throw new ArgumentNullException("key");
+            if (key == null) throw new ArgumentNullException(nameof(key));
 
             return _storage.UseConnection(connection =>
             {
@@ -456,7 +454,7 @@ order by Id desc";
                     connection
                         .Query<DateTime?>(
                             "select min(ExpireAt) from `Set` where `Key` = @key", 
-                            new { key = key }).Single();
+                            new {key }).Single();
                 if (!result.HasValue) return TimeSpan.FromSeconds(-1);
 
                 return result.Value - DateTime.UtcNow;
@@ -465,8 +463,8 @@ order by Id desc";
 
         public override void SetRangeInHash(string key, IEnumerable<KeyValuePair<string, string>> keyValuePairs)
         {
-            if (key == null) throw new ArgumentNullException("key");
-            if (keyValuePairs == null) throw new ArgumentNullException("keyValuePairs");
+            if (key == null) throw new ArgumentNullException(nameof(key));
+            if (keyValuePairs == null) throw new ArgumentNullException(nameof(keyValuePairs));
 
             _storage.UseTransaction(connection =>
             {
@@ -476,14 +474,14 @@ order by Id desc";
                         "insert into Hash (`Key`, Field, Value) " +
                         "value (@key, @field, @value) " +
                         "on duplicate key update Value = @value", 
-                        new { key = key, field = keyValuePair.Key, value = keyValuePair.Value });
+                        new {key, field = keyValuePair.Key, value = keyValuePair.Value });
                 }
             });
         }
 
         public override Dictionary<string, string> GetAllEntriesFromHash(string key)
         {
-            if (key == null) throw new ArgumentNullException("key");
+            if (key == null) throw new ArgumentNullException(nameof(key));
 
             return _storage.UseConnection(connection =>
             {

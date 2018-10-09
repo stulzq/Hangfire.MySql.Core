@@ -18,9 +18,7 @@ namespace Hangfire.MySql.Core
 
         public CountersAggregator(MySqlStorage storage, TimeSpan interval)
         {
-            if (storage == null) throw new ArgumentNullException("storage");
-
-            _storage = storage;
+            _storage = storage ?? throw new ArgumentNullException(nameof(storage));
             _interval = interval;
         }
 

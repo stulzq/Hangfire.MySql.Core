@@ -35,9 +35,7 @@ namespace Hangfire.MySql.Core
 
         public ExpirationManager(MySqlStorage storage, TimeSpan checkInterval)
         {
-            if (storage == null) throw new ArgumentNullException("storage");
-
-            _storage = storage;
+            _storage = storage ?? throw new ArgumentNullException(nameof(storage));
             _checkInterval = checkInterval;
         }
 
@@ -65,8 +63,7 @@ namespace Hangfire.MySql.Core
                                     cancellationToken).Acquire())
                             {
                                 removedCount = connection.Execute(
-                                    String.Format(
-                                        "delete from `{0}` where ExpireAt < @now limit @count;", table),
+                                    $"delete from `{table}` where ExpireAt < @now limit @count;",
                                     new {now = DateTime.UtcNow, count = NumberOfRecordsInSinglePass});
                             }
 
@@ -80,8 +77,7 @@ namespace Hangfire.MySql.Core
 
                     if (removedCount > 0)
                     {
-                        Logger.Trace(String.Format("Removed {0} outdated record(s) from '{1}' table.", removedCount,
-                            table));
+                        Logger.Trace($"Removed {removedCount} outdated record(s) from '{table}' table.");
 
                         cancellationToken.WaitHandle.WaitOne(DelayBetweenPasses);
                         cancellationToken.ThrowIfCancellationRequested();

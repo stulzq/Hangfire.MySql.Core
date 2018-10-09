@@ -9,8 +9,8 @@ namespace Hangfire.MySql.Core.JobQueue
 
         public MySqlJobQueueProvider(MySqlStorage storage, MySqlStorageOptions options)
         {
-            if (storage == null) throw new ArgumentNullException("storage");
-            if (options == null) throw new ArgumentNullException("options");
+            if (storage == null) throw new ArgumentNullException(nameof(storage));
+            if (options == null) throw new ArgumentNullException(nameof(options));
 
             _jobQueue = new MySqlJobQueue(storage, options);
             _monitoringApi = new MySqlJobQueueMonitoringApi(storage);

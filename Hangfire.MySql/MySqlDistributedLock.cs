@@ -43,9 +43,7 @@ namespace Hangfire.MySql.Core
             _start = DateTime.UtcNow;
         }
 
-        public string Resource {
-            get { return _resource; }
-        }
+        public string Resource => _resource;
 
         private int AcquireLock(string resource, TimeSpan timeout)
         {
@@ -71,10 +69,7 @@ namespace Hangfire.MySql.Core
         {
             Release();
 
-            if (_storage != null)
-            {
-                _storage.ReleaseConnection(_connection);
-            }
+            _storage?.ReleaseConnection(_connection);
         }
 
         internal MySqlDistributedLock Acquire()
@@ -125,9 +120,8 @@ namespace Hangfire.MySql.Core
         {
             if (obj == null) return 1;
 
-            var mySqlDistributedLock = obj as MySqlDistributedLock;
-            if (mySqlDistributedLock != null)
-                return string.Compare(this.Resource, mySqlDistributedLock.Resource, StringComparison.OrdinalIgnoreCase);
+            if (obj is MySqlDistributedLock mySqlDistributedLock)
+                return string.Compare(Resource, mySqlDistributedLock.Resource, StringComparison.OrdinalIgnoreCase);
             
             throw new ArgumentException("Object is not a mySqlDistributedLock");
         }

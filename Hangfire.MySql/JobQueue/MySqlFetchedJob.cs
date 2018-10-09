@@ -23,10 +23,10 @@ namespace Hangfire.MySql.Core.JobQueue
             IDbConnection connection,
             FetchedJob fetchedJob)
         {
-	        if (fetchedJob == null) throw new ArgumentNullException("fetchedJob");
+	        if (fetchedJob == null) throw new ArgumentNullException(nameof(fetchedJob));
 
-            _storage = storage ?? throw new ArgumentNullException("storage");
-            _connection = connection ?? throw new ArgumentNullException("connection");
+            _storage = storage ?? throw new ArgumentNullException(nameof(storage));
+            _connection = connection ?? throw new ArgumentNullException(nameof(connection));
             _id = fetchedJob.Id;
             JobId = fetchedJob.JobId.ToString(CultureInfo.InvariantCulture);
             Queue = fetchedJob.Queue; 
