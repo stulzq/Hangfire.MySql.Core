@@ -167,9 +167,13 @@ namespace Hangfire.MySql.Core
         {
             return UseConnection(connection =>
             {
-                T result = func(connection);
+                using (MySqlTransaction transaction = connection.BeginTransaction(isolationLevel ?? _options.TransactionIsolationLevel ?? IsolationLevel.ReadUncommitted))
+                {
+                    T result = func(connection);
+                    transaction.Commit();
 
-                return result;
+                    return result;
+                }
             });
         }
         
