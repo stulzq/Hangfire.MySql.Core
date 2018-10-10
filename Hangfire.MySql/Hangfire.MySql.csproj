@@ -1,0 +1,36 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>netstandard2.0</TargetFrameworks>
+    <Description>MySql storage support for Hangfire (background job system for .NET Core applications).</Description>
+    <AssemblyTitle>Hangfire MySql Storage</AssemblyTitle>
+    <PackageId>ZCheJian.Hangfire.MySql</PackageId>
+    <Product>Hangfire.MySql</Product>
+    <Company>ZCheJian</Company>
+    <Authors>ZCheJian</Authors>
+    <Owners>ZCheJian</Owners>
+    <Title>Hangfire MySql Storage</Title>
+    <PackageLicenseUrl></PackageLicenseUrl>
+    <PackageProjectUrl>https://github.com/zlzforever/Hangfire.MySql.Core</PackageProjectUrl>
+    <Copyright>Copyright © ZCheJian</Copyright>
+    <PackageTags>Hangfire MySql</PackageTags>
+    <Version>1.0.0-preview</Version>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <AssemblyName>ZCheJian.Hangfire.MySql</AssemblyName>
+    <RootNamespace>Hangfire.MySql</RootNamespace>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Remove="Install.sql" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Install.sql" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CSharp" Version="4.5.0" />
+    <PackageReference Include="MySqlConnector" Version="0.45.1" />
+    <PackageReference Include="Newtonsoft.Json" Version="11.0.2" />
+    <PackageReference Include="Dapper" Version="1.50.5" />
+    <PackageReference Include="Hangfire.Core" Version="1.6.20" />
+  </ItemGroup>
+</Project>
