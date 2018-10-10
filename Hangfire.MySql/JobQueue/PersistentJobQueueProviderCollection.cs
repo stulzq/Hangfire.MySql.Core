@@ -3,7 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using Hangfire.Logging;
 
-namespace Hangfire.MySql.Core.JobQueue
+namespace Hangfire.MySql.JobQueue
 {
     public class PersistentJobQueueProviderCollection : IEnumerable<IPersistentJobQueueProvider>
     {

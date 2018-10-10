@@ -1,60 +1,59 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using Dapper;
 using Hangfire.Logging;
 using MySql.Data.MySqlClient;
 
-namespace Hangfire.MySql.Core
+namespace Hangfire.MySql
 {
-    public static class MySqlObjectsInstaller
-    {
-        private static readonly ILog Log = LogProvider.GetLogger(typeof(MySqlStorage));
-        public static void Install(MySqlConnection connection)
-        {
-            if (connection == null) throw new ArgumentNullException(nameof(connection));
+	public static class MySqlObjectsInstaller
+	{
+		private static readonly ILog Log = LogProvider.GetLogger(typeof(MySqlStorage));
 
-            if (TablesExists(connection))
-            {
-                Log.Info("DB tables already exist. Exit install");
-                return;
-            }
+		public static void Install(MySqlConnection connection)
+		{
+			if (connection == null) throw new ArgumentNullException(nameof(connection));
 
-            Log.Info("Start installing Hangfire SQL objects...");
+			if (TablesExists(connection))
+			{
+				Log.Info("DB tables already exist. Exit install");
+				return;
+			}
 
-            var script = GetStringResource("Hangfire.MySql.Core.Install.sql");
+			Log.Info("Start installing Hangfire SQL objects...");
 
-            connection.Execute(script);
+			var script = GetStringResource("Install.sql");
 
-            Log.Info("Hangfire SQL objects installed.");
-        }
+			connection.Execute(script);
 
-        private static bool TablesExists(MySqlConnection connection)
-        {
-            return connection.ExecuteScalar<string>("SHOW TABLES LIKE 'Job';") != null;            
-        }
+			Log.Info("Hangfire SQL objects installed.");
+		}
 
-        private static string GetStringResource(string resourceName)
-        {
+		private static bool TablesExists(MySqlConnection connection)
+		{
+			return connection.ExecuteScalar<string>("SHOW TABLES LIKE 'Job';") != null;
+		}
+
+		internal static string GetStringResource(string resourceName)
+		{
 #if NET45
-            var assembly = typeof(MySqlObjectsInstaller).Assembly;
+			var assembly = typeof(MySqlObjectsInstaller).Assembly;
 #else
-            var assembly = typeof(MySqlObjectsInstaller).GetTypeInfo().Assembly;
+			var assembly = typeof(MySqlObjectsInstaller).GetTypeInfo().Assembly;
 #endif
-
-            using (var stream = assembly.GetManifestResourceStream(resourceName))
-            {
-                if (stream == null)
-                {
-                    throw new InvalidOperationException(
-                        $"Requested resource `{resourceName}` was not found in the assembly `{assembly}`.");
-                }
-
-                using (var reader = new StreamReader(stream))
-                {
-                    return reader.ReadToEnd();
-                }
-            }
-        }
-    }
+			var fullName = assembly.GetManifestResourceNames().First(n => n.EndsWith(resourceName));
+			if (fullName == null)
+			{
+				throw new InvalidOperationException(
+					$"Requested resource `{resourceName}` was not found in the assembly `{assembly}`.");
+			}
+			using (var stream = assembly.GetManifestResourceStream(fullName))
+			using (var reader = new StreamReader(stream))
+			{
+				return reader.ReadToEnd();
+			}
+		}
+	}
 }

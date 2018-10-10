@@ -1,4 +1,4 @@
-﻿namespace Hangfire.MySql.Core.Entities
+﻿namespace Hangfire.MySql.Entities
 {
     internal class JobParameter
     {

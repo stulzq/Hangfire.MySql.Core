@@ -5,7 +5,7 @@ using Dapper;
 using Hangfire.Logging;
 using Hangfire.Storage;
 
-namespace Hangfire.MySql.Core.JobQueue
+namespace Hangfire.MySql.JobQueue
 {
     internal class MySqlFetchedJob : IFetchedJob
     {

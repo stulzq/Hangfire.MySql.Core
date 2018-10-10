@@ -2,7 +2,7 @@ using System.Data;
 using System.Threading;
 using Hangfire.Storage;
 
-namespace Hangfire.MySql.Core.JobQueue
+namespace Hangfire.MySql.JobQueue
 {
     public interface IPersistentJobQueue
     {

@@ -7,7 +7,7 @@ using Hangfire.Logging;
 using Hangfire.Storage;
 using MySql.Data.MySqlClient;
 
-namespace Hangfire.MySql.Core.JobQueue
+namespace Hangfire.MySql.JobQueue
 {
     internal class MySqlJobQueue : IPersistentJobQueue
     {

@@ -5,11 +5,11 @@ using System.Threading;
 using Dapper;
 using Hangfire.Common;
 using Hangfire.Logging;
-using Hangfire.MySql.Core.Entities;
+using Hangfire.MySql.Entities;
 using Hangfire.Server;
 using Hangfire.Storage;
 
-namespace Hangfire.MySql.Core
+namespace Hangfire.MySql
 {
     public class MySqlStorageConnection : JobStorageConnection
     {

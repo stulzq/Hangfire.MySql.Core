@@ -1,7 +1,7 @@
 using System;
 using System.Data;
 
-namespace Hangfire.MySql.Core
+namespace Hangfire.MySql
 {
     public  class MySqlStorageOptions
     {
