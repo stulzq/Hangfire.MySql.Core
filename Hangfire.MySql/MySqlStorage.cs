@@ -35,6 +35,17 @@ namespace Hangfire.MySql.Core
 
             if (IsConnectionString(connectionString))
             {
+                if (!connectionString.ToLower().Contains("ignorecommandtransaction"))
+                {
+                    if (connectionString.Last() != ';')
+                    {
+                        connectionString += connectionString + ";IgnoreCommandTransaction=true";
+                    }
+                    else
+                    {
+                        connectionString += connectionString + "IgnoreCommandTransaction=true";
+                    }
+                }
                 _connectionString = connectionString;
             }
             else
