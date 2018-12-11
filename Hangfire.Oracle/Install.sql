@@ -1,153 +1,343 @@
-﻿-- ----------------------------
+﻿CREATE SEQUENCE MISP.HF_SEQUENCE
+  START WITH 1
+  MAXVALUE 9999999999999999999999999999
+  MINVALUE 1
+  NOCYCLE
+  CACHE 20
+  NOORDER;
+
+
+-- ----------------------------
 -- Table structure for `Job`
 -- ----------------------------
-CREATE TABLE `Job` (
-  `Id` int(11) NOT NULL AUTO_INCREMENT,
-  `StateId` int(11) DEFAULT NULL,
-  `StateName` varchar(20) DEFAULT NULL,
-  `InvocationData` longtext NOT NULL,
-  `Arguments` longtext NOT NULL,
-  `CreatedAt` datetime(6) NOT NULL,
-  `ExpireAt` datetime(6) DEFAULT NULL,
-  PRIMARY KEY (`Id`),
-  KEY `IX_Job_StateName` (`StateName`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+CREATE TABLE MISP.HF_JOB
+(
+  ID                     NUMBER(10),
+  STATE_ID               NUMBER(10),
+  STATE_NAME             NVARCHAR2(20),
+  INVOCATION_DATA        NCLOB,
+  ARGUMENTS              NCLOB,
+  CREATED_AT             TIMESTAMP(4),
+  EXPIRE_AT              TIMESTAMP(4)
+)
+LOB (INVOCATION_DATA) STORE AS BASICFILE (
+  ENABLE      STORAGE IN ROW
+  CHUNK       8192
+  RETENTION
+  NOCACHE
+  LOGGING)
+LOB (ARGUMENTS) STORE AS BASICFILE (
+  ENABLE      STORAGE IN ROW
+  CHUNK       8192
+  RETENTION
+  NOCACHE
+  LOGGING)
+LOGGING 
+NOCOMPRESS 
+NOCACHE
+NOPARALLEL
+MONITORING;
+
+ALTER TABLE MISP.HF_JOB ADD (
+  PRIMARY KEY
+  (ID)
+  USING INDEX
+  ENABLE VALIDATE);
 
 
 -- ----------------------------
 -- Table structure for `Counter`
 -- ----------------------------
-CREATE TABLE `Counter` (
-  `Id` int(11) NOT NULL AUTO_INCREMENT,
-  `Key` varchar(100) NOT NULL,
-  `Value` int(11) NOT NULL,
-  `ExpireAt` datetime DEFAULT NULL,
-  PRIMARY KEY (`Id`),
-  KEY `IX_Counter_Key` (`Key`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+CREATE TABLE MISP.HF_COUNTER
+(
+  ID         NUMBER(10),
+  KEY        NVARCHAR2(255),
+  VALUE      NUMBER(10),
+  EXPIRE_AT  TIMESTAMP(4)
+)
+LOGGING 
+NOCOMPRESS 
+NOCACHE
+NOPARALLEL
+MONITORING;
+
+ALTER TABLE MISP.HF_COUNTER ADD (
+  PRIMARY KEY
+  (ID)
+  USING INDEX
+  ENABLE VALIDATE);
 
 
-CREATE TABLE `AggregatedCounter` (
-	Id int(11) NOT NULL AUTO_INCREMENT,
-	`Key` varchar(100) NOT NULL,
-	`Value` int(11) NOT NULL,
-	ExpireAt datetime DEFAULT NULL,
-	PRIMARY KEY (`Id`),
-	UNIQUE KEY `IX_CounterAggregated_Key` (`Key`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+CREATE TABLE MISP.HF_AGGREGATED_COUNTER
+(
+  ID         NUMBER(10),
+  KEY        NVARCHAR2(255),
+  VALUE      NUMBER(10),
+  EXPIRE_AT  TIMESTAMP(4)
+)
+LOGGING 
+NOCOMPRESS 
+NOCACHE
+NOPARALLEL
+MONITORING;
+
+ALTER TABLE MISP.HF_AGGREGATED_COUNTER ADD (
+  PRIMARY KEY
+  (ID)
+  USING INDEX
+  ENABLE VALIDATE,
+  UNIQUE (KEY)
+  USING INDEX
+  ENABLE VALIDATE);
 
 
 -- ----------------------------
 -- Table structure for `DistributedLock`
 -- ----------------------------
-CREATE TABLE `DistributedLock` (
-  `Resource` varchar(100) NOT NULL,
-  `CreatedAt` datetime(6) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+
+CREATE TABLE MISP.HF_DISTRIBUTED_LOCK
+(
+  "RESOURCE"         NVARCHAR2(100),
+  CREATED_AT         TIMESTAMP(4)
+)
+LOGGING 
+NOCOMPRESS 
+NOCACHE
+NOPARALLEL
+MONITORING;
 
 
 -- ----------------------------
 -- Table structure for `Hash`
 -- ----------------------------
-CREATE TABLE `Hash` (
-  `Id` int(11) NOT NULL AUTO_INCREMENT,
-  `Key` varchar(100) NOT NULL,
-  `Field` varchar(40) NOT NULL,
-  `Value` longtext,
-  `ExpireAt` datetime(6) DEFAULT NULL,
-  PRIMARY KEY (`Id`),
-  UNIQUE KEY `IX_Hash_Key_Field` (`Key`,`Field`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+CREATE TABLE MISP.HF_HASH
+(
+  ID         NUMBER(10),
+  KEY        NVARCHAR2(255),
+  VALUE      NCLOB,
+  EXPIRE_AT  TIMESTAMP(4),
+  FIELD      NVARCHAR2(40)
+)
+LOB (VALUE) STORE AS BASICFILE (
+  ENABLE      STORAGE IN ROW
+  CHUNK       8192
+  RETENTION
+  NOCACHE
+  LOGGING)
+LOGGING 
+NOCOMPRESS 
+NOCACHE
+NOPARALLEL
+MONITORING;
+
+ALTER TABLE MISP.HF_HASH ADD (
+  PRIMARY KEY
+  (ID)
+  USING INDEX
+  ENABLE VALIDATE,
+  UNIQUE (KEY, FIELD)
+  USING INDEX
+  ENABLE VALIDATE);
 
 
 -- ----------------------------
 -- Table structure for `JobParameter`
 -- ----------------------------
-CREATE TABLE `JobParameter` (
-  `Id` int(11) NOT NULL AUTO_INCREMENT,
-  `JobId` int(11) NOT NULL,
-  `Name` varchar(40) NOT NULL,
-  `Value` longtext,
+CREATE TABLE MISP.HF_JOB_PARAMETER
+(
+  ID      NUMBER(10),
+  NAME    NVARCHAR2(40),
+  VALUE   NCLOB,
+  JOB_ID  NUMBER(10)
+)
+LOB (VALUE) STORE AS BASICFILE (
+  ENABLE      STORAGE IN ROW
+  CHUNK       8192
+  RETENTION
+  NOCACHE
+  LOGGING)
+LOGGING 
+NOCOMPRESS 
+NOCACHE
+NOPARALLEL
+MONITORING;
 
-  PRIMARY KEY (`Id`),
-  CONSTRAINT `IX_JobParameter_JobId_Name` UNIQUE (`JobId`,`Name`),
-  KEY `FK_JobParameter_Job` (`JobId`),
-  CONSTRAINT `FK_JobParameter_Job` FOREIGN KEY (`JobId`) REFERENCES `Job` (`Id`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+ALTER TABLE MISP.HF_JOB_PARAMETER ADD (
+  PRIMARY KEY
+  (ID)
+  USING INDEX
+  ENABLE VALIDATE);
+
+ALTER TABLE MISP.HF_JOB_PARAMETER ADD (
+  CONSTRAINT FK_JOB_PARAMETER_JOB 
+  FOREIGN KEY (JOB_ID) 
+  REFERENCES MISP.HF_JOB (ID)
+  ENABLE VALIDATE);
+
 
 -- ----------------------------
 -- Table structure for `JobQueue`
 -- ----------------------------
-CREATE TABLE `JobQueue` (
-  `Id` int(11) NOT NULL AUTO_INCREMENT,
-  `JobId` int(11) NOT NULL,
-  `Queue` varchar(50) NOT NULL,
-  `FetchedAt` datetime(6) DEFAULT NULL,
-  `FetchToken` varchar(36) DEFAULT NULL,
-  
-  PRIMARY KEY (`Id`),
-  INDEX `IX_JobQueue_QueueAndFetchedAt` (`Queue`,`FetchedAt`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+CREATE TABLE MISP.HF_JOB_QUEUE
+(
+  ID            NUMBER(10),
+  JOB_ID        NUMBER(10),
+  QUEUE         NVARCHAR2(50),
+  FETCHED_AT    TIMESTAMP(4),
+  FETCH_TOKEN  NVARCHAR2(36)
+)
+LOGGING 
+NOCOMPRESS 
+NOCACHE
+NOPARALLEL
+MONITORING;
+
+ALTER TABLE MISP.HF_JOB_QUEUE ADD (
+  PRIMARY KEY
+  (ID)
+  USING INDEX
+  ENABLE VALIDATE);
+
+ALTER TABLE MISP.HF_JOB_QUEUE ADD (
+  CONSTRAINT FK_JOB_QUEUE_JOB 
+  FOREIGN KEY (JOB_ID) 
+  REFERENCES MISP.HF_JOB (ID)
+  ENABLE VALIDATE);
+
 
 -- ----------------------------
 -- Table structure for `JobState`
 -- ----------------------------
-CREATE TABLE `JobState` (
-  `Id` int(11) NOT NULL AUTO_INCREMENT,
-  `JobId` int(11) NOT NULL,
-  `Name` varchar(20) NOT NULL,
-  `Reason` varchar(100) DEFAULT NULL,
-  `CreatedAt` datetime(6) NOT NULL,
-  `Data` longtext,
-  PRIMARY KEY (`Id`),
-  KEY `FK_JobState_Job` (`JobId`),
-  CONSTRAINT `FK_JobState_Job` FOREIGN KEY (`JobId`) REFERENCES `Job` (`Id`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+CREATE TABLE MISP.HF_JOB_STATE
+(
+  ID          NUMBER(10),
+  JOB_ID      NUMBER(10),
+  NAME        NVARCHAR2(20),
+  REASON      NVARCHAR2(100),
+  CREATED_AT  TIMESTAMP(4),
+  DATA        NCLOB  
+)
+LOB (DATA) STORE AS BASICFILE (
+  ENABLE      STORAGE IN ROW
+  CHUNK       8192
+  RETENTION
+  NOCACHE
+  LOGGING)
+LOGGING 
+NOCOMPRESS 
+NOCACHE
+NOPARALLEL
+MONITORING;
+
+ALTER TABLE MISP.HF_JOB_STATE ADD (
+  PRIMARY KEY
+  (ID)
+  USING INDEX
+  ENABLE VALIDATE);
+
+ALTER TABLE MISP.HF_JOB_STATE ADD (
+  CONSTRAINT FK_JOB_STATE_JOB 
+  FOREIGN KEY (JOB_ID) 
+  REFERENCES MISP.HF_JOB (ID)
+  ENABLE VALIDATE);
+
 
 -- ----------------------------
 -- Table structure for `Server`
 -- ----------------------------
-CREATE TABLE `Server` (
-  `Id` varchar(100) NOT NULL,
-  `Data` longtext NOT NULL,
-  `LastHeartbeat` datetime(6) DEFAULT NULL,
-  PRIMARY KEY (`Id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+CREATE TABLE MISP.HF_SERVER
+(
+  ID               NVARCHAR2(100),
+  DATA             NCLOB,
+  LAST_HEART_BEAT  TIMESTAMP(4)
+)
+LOB (DATA) STORE AS BASICFILE (
+  ENABLE      STORAGE IN ROW
+  CHUNK       8192
+  RETENTION
+  NOCACHE
+  LOGGING)
+LOGGING 
+NOCOMPRESS 
+NOCACHE
+NOPARALLEL
+MONITORING;
+
+ALTER TABLE MISP.HF_SERVER ADD (
+  PRIMARY KEY
+  (ID)
+  USING INDEX
+  ENABLE VALIDATE);
 
 
 -- ----------------------------
 -- Table structure for `Set`
 -- ----------------------------
-CREATE TABLE `Set` (
-  `Id` int(11) NOT NULL AUTO_INCREMENT,
-  `Key` varchar(100) NOT NULL,
-  `Value` varchar(256) NOT NULL,
-  `Score` float NOT NULL,
-  `ExpireAt` datetime DEFAULT NULL,
-  PRIMARY KEY (`Id`),
-  UNIQUE KEY `IX_Set_Key_Value` (`Key`,`Value`)
-) ENGINE=InnoDB  CHARSET=latin1;
-
-
-
-CREATE TABLE `State`
+CREATE TABLE MISP.HF_SET
 (
-	Id int(11) NOT NULL AUTO_INCREMENT,
-	JobId int(11) NOT NULL,
-	Name varchar(20) NOT NULL,
-	Reason varchar(100) NULL,
-	CreatedAt datetime(6) NOT NULL,
-	Data longtext NULL,
-	PRIMARY KEY (`Id`),
-	KEY `FK_HangFire_State_Job` (`JobId`),
-	CONSTRAINT `FK_HangFire_State_Job` FOREIGN KEY (`JobId`) REFERENCES `Job` (`Id`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB  CHARSET=latin1;
+  ID         NUMBER(10),
+  KEY        NVARCHAR2(255),
+  VALUE      NVARCHAR2(255),
+  SCORE      FLOAT(126),
+  EXPIRE_AT  TIMESTAMP(4)
+)
+LOGGING 
+NOCOMPRESS 
+NOCACHE
+NOPARALLEL
+MONITORING;
 
-CREATE TABLE `List`
+ALTER TABLE MISP.HF_SET ADD (
+  PRIMARY KEY
+  (ID)
+  USING INDEX
+  ENABLE VALIDATE,
+  UNIQUE (KEY, VALUE)
+  USING INDEX
+  ENABLE VALIDATE);
+
+
+
+
+CREATE TABLE MISP.HF_STATE
 (
-	`Id` int(11) NOT NULL AUTO_INCREMENT,
-	`Key` varchar(100) NOT NULL,
-	`Value` longtext NULL,
-	`ExpireAt` datetime(6) NULL,
-	PRIMARY KEY (`Id`)
-) ENGINE=InnoDB  CHARSET=latin1;
+  ID          NUMBER(10),
+  JOB_ID      NUMBER(10),
+  NAME        NVARCHAR2(20),
+  REASON      NVARCHAR2(100),
+  CREATED_AT  TIMESTAMP(4),
+  DATA        NCLOB
+)
+LOB (DATA) STORE AS BASICFILE (
+  ENABLE      STORAGE IN ROW
+  CHUNK       8192
+  RETENTION
+  NOCACHE
+  LOGGING)
+LOGGING 
+NOCOMPRESS 
+NOCACHE
+NOPARALLEL
+MONITORING;
+
+ALTER TABLE MISP.HF_STATE ADD (
+  PRIMARY KEY
+  (ID)
+  USING INDEX
+  ENABLE VALIDATE);
+
+ALTER TABLE MISP.HF_STATE ADD (
+  CONSTRAINT FK_STATE_JOB 
+  FOREIGN KEY (JOB_ID) 
+  REFERENCES MISP.HF_JOB (ID)
+  ENABLE VALIDATE);
+
+
+--CREATE TABLE `List`
+--(
+--	`Id` int(11) NOT NULL AUTO_INCREMENT,
+--	`Key` varchar(100) NOT NULL,
+--	`Value` longtext NULL,
+--	`ExpireAt` datetime(6) NULL,
+--	PRIMARY KEY (`Id`)
+--) ENGINE=InnoDB  CHARSET=latin1;
