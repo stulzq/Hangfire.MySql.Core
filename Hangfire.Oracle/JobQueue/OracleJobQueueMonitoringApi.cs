@@ -6,15 +6,15 @@ using Dapper;
 
 namespace Hangfire.Oracle.Core.JobQueue
 {
-    internal class MySqlJobQueueMonitoringApi : IPersistentJobQueueMonitoringApi
+    internal class OracleJobQueueMonitoringApi : IPersistentJobQueueMonitoringApi
     {
         private static readonly TimeSpan QueuesCacheTimeout = TimeSpan.FromSeconds(5);
         private readonly object _cacheLock = new object();
         private List<string> _queuesCache = new List<string>();
         private DateTime _cacheUpdated;
 
-        private readonly MySqlStorage _storage;
-        public MySqlJobQueueMonitoringApi(MySqlStorage storage)
+        private readonly OracleStorage _storage;
+        public OracleJobQueueMonitoringApi(OracleStorage storage)
         {
             _storage = storage ?? throw new ArgumentNullException(nameof(storage));
         }

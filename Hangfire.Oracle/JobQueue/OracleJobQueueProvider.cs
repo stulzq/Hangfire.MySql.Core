@@ -2,18 +2,18 @@
 
 namespace Hangfire.Oracle.Core.JobQueue
 {
-    internal class MySqlJobQueueProvider : IPersistentJobQueueProvider
+    internal class OracleJobQueueProvider : IPersistentJobQueueProvider
     {
         private readonly IPersistentJobQueue _jobQueue;
         private readonly IPersistentJobQueueMonitoringApi _monitoringApi;
 
-        public MySqlJobQueueProvider(MySqlStorage storage, MySqlStorageOptions options)
+        public OracleJobQueueProvider(OracleStorage storage, OracleStorageOptions options)
         {
             if (storage == null) throw new ArgumentNullException(nameof(storage));
             if (options == null) throw new ArgumentNullException(nameof(options));
 
-            _jobQueue = new MySqlJobQueue(storage, options);
-            _monitoringApi = new MySqlJobQueueMonitoringApi(storage);
+            _jobQueue = new OracleJobQueue(storage, options);
+            _monitoringApi = new OracleJobQueueMonitoringApi(storage);
         }
 
         public IPersistentJobQueue GetJobQueue()

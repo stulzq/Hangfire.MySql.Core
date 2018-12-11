@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Data;
 using System.IO;
 using System.Reflection;
 
@@ -6,14 +7,12 @@ using Dapper;
 
 using Hangfire.Logging;
 
-using MySql.Data.MySqlClient;
-
 namespace Hangfire.Oracle.Core
 {
-    public static class MySqlObjectsInstaller
+    public static class OracleObjectsInstaller
     {
-        private static readonly ILog Log = LogProvider.GetLogger(typeof(MySqlStorage));
-        public static void Install(MySqlConnection connection)
+        private static readonly ILog Log = LogProvider.GetLogger(typeof(OracleStorage));
+        public static void Install(IDbConnection connection)
         {
             if (connection == null) throw new ArgumentNullException(nameof(connection));
 
@@ -32,7 +31,7 @@ namespace Hangfire.Oracle.Core
             Log.Info("Hangfire SQL objects installed.");
         }
 
-        private static bool TablesExists(MySqlConnection connection)
+        private static bool TablesExists(IDbConnection connection)
         {
             return connection.ExecuteScalar<string>("SHOW TABLES LIKE 'Job';") != null;
         }
@@ -40,9 +39,9 @@ namespace Hangfire.Oracle.Core
         private static string GetStringResource(string resourceName)
         {
 #if NET45
-            var assembly = typeof(MySqlObjectsInstaller).Assembly;
+            var assembly = typeof(OracleObjectsInstaller).Assembly;
 #else
-            var assembly = typeof(MySqlObjectsInstaller).GetTypeInfo().Assembly;
+            var assembly = typeof(OracleObjectsInstaller).GetTypeInfo().Assembly;
 #endif
 
             using (var stream = assembly.GetManifestResourceStream(resourceName))

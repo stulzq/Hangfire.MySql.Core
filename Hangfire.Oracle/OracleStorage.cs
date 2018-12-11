@@ -11,26 +11,26 @@ using Hangfire.Oracle.Core.Monitoring;
 using Hangfire.Server;
 using Hangfire.Storage;
 
-using MySql.Data.MySqlClient;
+using Oracle.ManagedDataAccess.Client;
 
 namespace Hangfire.Oracle.Core
 {
-    public class MySqlStorage : JobStorage, IDisposable
+    public class OracleStorage : JobStorage, IDisposable
     {
-        private static readonly ILog Logger = LogProvider.GetLogger(typeof(MySqlStorage));
+        private static readonly ILog Logger = LogProvider.GetLogger(typeof(OracleStorage));
 
         private readonly string _connectionString;
-        private readonly MySqlConnection _existingConnection;
-        private readonly MySqlStorageOptions _options;
+        private readonly IDbConnection _existingConnection;
+        private readonly OracleStorageOptions _options;
 
         public virtual PersistentJobQueueProviderCollection QueueProviders { get; private set; }
 
-        public MySqlStorage(string connectionString)
-            : this(connectionString, new MySqlStorageOptions())
+        public OracleStorage(string connectionString)
+            : this(connectionString, new OracleStorageOptions())
         {
         }
 
-        public MySqlStorage(string connectionString, MySqlStorageOptions options)
+        public OracleStorage(string connectionString, OracleStorageOptions options)
         {
             if (connectionString == null)
             {
@@ -67,7 +67,7 @@ namespace Hangfire.Oracle.Core
             {
                 using (var connection = CreateAndOpenConnection())
                 {
-                    MySqlObjectsInstaller.Install(connection);
+                    OracleObjectsInstaller.Install(connection);
                 }
             }
 
@@ -84,10 +84,10 @@ namespace Hangfire.Oracle.Core
             return connectionString + ";Allow User Variables=True;";
         }
 
-        internal MySqlStorage(MySqlConnection existingConnection)
+        internal OracleStorage(IDbConnection existingConnection)
         {
             _existingConnection = existingConnection ?? throw new ArgumentNullException(nameof(existingConnection));
-            _options = new MySqlStorageOptions();
+            _options = new OracleStorageOptions();
 
             InitializeQueueProviders();
         }
@@ -96,7 +96,7 @@ namespace Hangfire.Oracle.Core
         {
             QueueProviders =
                 new PersistentJobQueueProviderCollection(
-                    new MySqlJobQueueProvider(this, _options));
+                    new OracleJobQueueProvider(this, _options));
         }
 
         public override IEnumerable<IServerComponent> GetComponents()
@@ -133,7 +133,10 @@ namespace Hangfire.Oracle.Core
                     }
                 }
 
-                if (builder.Length != 0) builder.Append("@");
+                if (builder.Length != 0)
+                {
+                    builder.Append("@");
+                }
 
                 foreach (var alias in new[] { "Database", "Initial Catalog" })
                 {
@@ -157,12 +160,12 @@ namespace Hangfire.Oracle.Core
 
         public override IMonitoringApi GetMonitoringApi()
         {
-            return new MySqlMonitoringApi(this, _options.DashboardJobListLimit);
+            return new OracleMonitoringApi(this, _options.DashboardJobListLimit);
         }
 
         public override IStorageConnection GetConnection()
         {
-            return new MySqlStorageConnection(this);
+            return new OracleStorageConnection(this);
         }
 
         private bool IsConnectionString(string nameOrConnectionString)
@@ -170,7 +173,7 @@ namespace Hangfire.Oracle.Core
             return nameOrConnectionString.Contains(";");
         }
 
-        internal void UseTransaction([InstantHandle] Action<MySqlConnection> action)
+        internal void UseTransaction([InstantHandle] Action<IDbConnection> action)
         {
             UseTransaction(connection =>
             {
@@ -180,11 +183,11 @@ namespace Hangfire.Oracle.Core
         }
 
         internal T UseTransaction<T>(
-           [InstantHandle] Func<MySqlConnection, T> func, IsolationLevel? isolationLevel)
+           [InstantHandle] Func<IDbConnection, T> func, IsolationLevel? isolationLevel)
         {
             return UseConnection(connection =>
             {
-                using (MySqlTransaction transaction = connection.BeginTransaction(isolationLevel ?? _options.TransactionIsolationLevel ?? IsolationLevel.ReadUncommitted))
+                using (var transaction = connection.BeginTransaction(isolationLevel ?? _options.TransactionIsolationLevel ?? IsolationLevel.ReadUncommitted))
                 {
                     T result = func(connection);
                     transaction.Commit();
@@ -194,7 +197,7 @@ namespace Hangfire.Oracle.Core
             });
         }
 
-        internal void UseConnection([InstantHandle] Action<MySqlConnection> action)
+        internal void UseConnection([InstantHandle] Action<IDbConnection> action)
         {
             UseConnection(connection =>
             {
@@ -203,9 +206,9 @@ namespace Hangfire.Oracle.Core
             });
         }
 
-        internal T UseConnection<T>([InstantHandle] Func<MySqlConnection, T> func)
+        internal T UseConnection<T>([InstantHandle] Func<IDbConnection, T> func)
         {
-            MySqlConnection connection = null;
+            IDbConnection connection = null;
 
             try
             {
@@ -218,14 +221,14 @@ namespace Hangfire.Oracle.Core
             }
         }
 
-        internal MySqlConnection CreateAndOpenConnection()
+        internal IDbConnection CreateAndOpenConnection()
         {
             if (_existingConnection != null)
             {
                 return _existingConnection;
             }
 
-            var connection = new MySqlConnection(_connectionString);
+            var connection = new OracleConnection(_connectionString);
             connection.Open();
 
             return connection;

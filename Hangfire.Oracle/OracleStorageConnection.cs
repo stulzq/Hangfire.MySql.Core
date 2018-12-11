@@ -13,24 +13,24 @@ using Hangfire.Storage;
 
 namespace Hangfire.Oracle.Core
 {
-    public class MySqlStorageConnection : JobStorageConnection
+    public class OracleStorageConnection : JobStorageConnection
     {
-        private static readonly ILog Logger = LogProvider.GetLogger(typeof(MySqlStorageConnection));
+        private static readonly ILog Logger = LogProvider.GetLogger(typeof(OracleStorageConnection));
 
-        private readonly MySqlStorage _storage;
-        public MySqlStorageConnection(MySqlStorage storage)
+        private readonly OracleStorage _storage;
+        public OracleStorageConnection(OracleStorage storage)
         {
             _storage = storage ?? throw new ArgumentNullException(nameof(storage));
         }
 
         public override IWriteOnlyTransaction CreateWriteTransaction()
         {
-            return new MySqlWriteOnlyTransaction(_storage);
+            return new OracleWriteOnlyTransaction(_storage);
         }
 
         public override IDisposable AcquireDistributedLock(string resource, TimeSpan timeout)
         {
-            return new MySqlDistributedLock(_storage, resource, timeout).Acquire();
+            return new OracleDistributedLock(_storage, resource, timeout).Acquire();
         }
 
         public override string CreateExpiredJob(Job job, IDictionary<string, string> parameters, DateTime createdAt, TimeSpan expireIn)

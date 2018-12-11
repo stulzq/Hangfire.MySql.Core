@@ -3,11 +3,11 @@ using System.Data;
 
 namespace Hangfire.Oracle.Core
 {
-    public class MySqlStorageOptions
+    public class OracleStorageOptions
     {
         private TimeSpan _queuePollInterval;
 
-        public MySqlStorageOptions()
+        public OracleStorageOptions()
         {
             TransactionIsolationLevel = IsolationLevel.ReadCommitted;
             QueuePollInterval = TimeSpan.FromSeconds(15);
@@ -17,6 +17,7 @@ namespace Hangfire.Oracle.Core
             DashboardJobListLimit = 50000;
             TransactionTimeout = TimeSpan.FromMinutes(1);
             InvisibilityTimeout = TimeSpan.FromMinutes(30);
+            SchemaName = "MISP"; // TODO: Change
         }
 
         public IsolationLevel? TransactionIsolationLevel { get; set; }
@@ -50,5 +51,7 @@ namespace Hangfire.Oracle.Core
         public TimeSpan TransactionTimeout { get; set; }
         [Obsolete("Does not make sense anymore. Background jobs re-queued instantly even after ungraceful shutdown now. Will be removed in 2.0.0.")]
         public TimeSpan InvisibilityTimeout { get; set; }
+
+        public string SchemaName { get; set; }
     }
 }

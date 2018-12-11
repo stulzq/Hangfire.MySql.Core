@@ -8,19 +8,19 @@ using Hangfire.Logging;
 
 namespace Hangfire.Oracle.Core
 {
-    public class MySqlDistributedLock : IDisposable, IComparable
+    public class OracleDistributedLock : IDisposable, IComparable
     {
-        private static readonly ILog Logger = LogProvider.GetLogger(typeof(MySqlDistributedLock));
+        private static readonly ILog Logger = LogProvider.GetLogger(typeof(OracleDistributedLock));
 
         private readonly string _resource;
         private readonly TimeSpan _timeout;
-        private readonly MySqlStorage _storage;
+        private readonly OracleStorage _storage;
         private readonly DateTime _start;
         private readonly CancellationToken _cancellationToken;
 
         private const int DelayBetweenPasses = 100;
 
-        public MySqlDistributedLock(MySqlStorage storage, string resource, TimeSpan timeout)
+        public OracleDistributedLock(OracleStorage storage, string resource, TimeSpan timeout)
             : this(storage.CreateAndOpenConnection(), resource, timeout)
         {
             _storage = storage;
@@ -28,15 +28,15 @@ namespace Hangfire.Oracle.Core
 
         private readonly IDbConnection _connection;
 
-        public MySqlDistributedLock(IDbConnection connection, string resource, TimeSpan timeout)
+        public OracleDistributedLock(IDbConnection connection, string resource, TimeSpan timeout)
             : this(connection, resource, timeout, new CancellationToken())
         {
         }
 
-        public MySqlDistributedLock(
+        public OracleDistributedLock(
             IDbConnection connection, string resource, TimeSpan timeout, CancellationToken cancellationToken)
         {
-            Logger.TraceFormat("MySqlDistributedLock resource={0}, timeout={1}", resource, timeout);
+            Logger.TraceFormat("OracleDistributedLock resource={0}, timeout={1}", resource, timeout);
 
             _resource = resource;
             _timeout = timeout;
@@ -77,7 +77,7 @@ namespace Hangfire.Oracle.Core
             }
         }
 
-        internal MySqlDistributedLock Acquire()
+        internal OracleDistributedLock Acquire()
         {
             Logger.TraceFormat("Acquire resource={0}, timeout={1}", _resource, _timeout);
 
@@ -97,7 +97,7 @@ namespace Hangfire.Oracle.Core
 
             if (insertedObjectCount == 0)
             {
-                throw new MySqlDistributedLockException("cannot acquire lock");
+                throw new OracleDistributedLockException("cannot acquire lock");
             }
             return this;
         }
@@ -123,13 +123,18 @@ namespace Hangfire.Oracle.Core
 
         public int CompareTo(object obj)
         {
-            if (obj == null) return 1;
+            if (obj == null)
+            {
+                return 1;
+            }
 
-            var mySqlDistributedLock = obj as MySqlDistributedLock;
-            if (mySqlDistributedLock != null)
-                return string.Compare(this.Resource, mySqlDistributedLock.Resource, StringComparison.OrdinalIgnoreCase);
+            var oracleDistributedLock = obj as OracleDistributedLock;
+            if (oracleDistributedLock != null)
+            {
+                return string.Compare(Resource, oracleDistributedLock.Resource, StringComparison.OrdinalIgnoreCase);
+            }
             
-            throw new ArgumentException("Object is not a mySqlDistributedLock");
+            throw new ArgumentException("Object is not a OracleDistributedLock");
         }
     }
 }

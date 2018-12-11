@@ -6,7 +6,7 @@ using Dapper;
 using Hangfire.Logging;
 using Hangfire.Server;
 
-using MySql.Data.MySqlClient;
+using Oracle.ManagedDataAccess.Client;
 
 namespace Hangfire.Oracle.Core
 {
@@ -28,15 +28,15 @@ namespace Hangfire.Oracle.Core
             "Hash",
         };
 
-        private readonly MySqlStorage _storage;
+        private readonly OracleStorage _storage;
         private readonly TimeSpan _checkInterval;
 
-        public ExpirationManager(MySqlStorage storage)
+        public ExpirationManager(OracleStorage storage)
             : this(storage, TimeSpan.FromHours(1))
         {
         }
 
-        public ExpirationManager(MySqlStorage storage, TimeSpan checkInterval)
+        public ExpirationManager(OracleStorage storage, TimeSpan checkInterval)
         {
             _storage = storage ?? throw new ArgumentNullException(nameof(storage));
             _checkInterval = checkInterval;
@@ -59,7 +59,7 @@ namespace Hangfire.Oracle.Core
                             Logger.DebugFormat("delete from `{0}` where ExpireAt < @now limit @count;", table);
 
                             using (
-                                new MySqlDistributedLock(
+                                new OracleDistributedLock(
                                     connection, 
                                     DistributedLockKey, 
                                     DefaultLockTimeout,
@@ -72,7 +72,7 @@ namespace Hangfire.Oracle.Core
 
                             Logger.DebugFormat("removed records count={0}",removedCount);
                         }
-                        catch (MySqlException ex)
+                        catch (OracleException ex)
                         {
                             Logger.Error(ex.ToString());
                         }

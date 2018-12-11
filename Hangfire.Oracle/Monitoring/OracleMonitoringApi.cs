@@ -13,16 +13,14 @@ using Hangfire.States;
 using Hangfire.Storage;
 using Hangfire.Storage.Monitoring;
 
-using MySql.Data.MySqlClient;
-
 namespace Hangfire.Oracle.Core.Monitoring
 {
-    internal class MySqlMonitoringApi : IMonitoringApi
+    internal class OracleMonitoringApi : IMonitoringApi
     {
-        private readonly MySqlStorage _storage;
+        private readonly OracleStorage _storage;
         private readonly int? _jobListLimit;
 
-        public MySqlMonitoringApi([NotNull] MySqlStorage storage, int? jobListLimit)
+        public OracleMonitoringApi([NotNull] OracleStorage storage, int? jobListLimit)
         {
             _storage = storage ?? throw new ArgumentNullException(nameof(storage));
             _jobListLimit = jobListLimit;
@@ -321,12 +319,12 @@ select sum(s.`Value`) from (
                 GetHourlyTimelineStats(connection, "failed"));
         }
 
-        private T UseConnection<T>(Func<MySqlConnection, T> action)
+        private T UseConnection<T>(Func<IDbConnection, T> action)
         {
             return _storage.UseTransaction(action, IsolationLevel.ReadUncommitted);
         }
 
-        private long GetNumberOfJobsByStateName(MySqlConnection connection, string stateName)
+        private long GetNumberOfJobsByStateName(IDbConnection connection, string stateName)
         {
             var sqlQuery = _jobListLimit.HasValue
                 ? "select count(j.Id) from (select Id from Job where StateName = @state limit @limit) as j"
@@ -348,7 +346,7 @@ select sum(s.`Value`) from (
         }
 
         private JobList<TDto> GetJobs<TDto>(
-            MySqlConnection connection,
+            IDbConnection connection,
             int from,
             int count,
             string stateName,
@@ -410,7 +408,7 @@ select sum(s.`Value`) from (
         }
 
         private Dictionary<DateTime, long> GetTimelineStats(
-            MySqlConnection connection,
+            IDbConnection connection,
             string type)
         {
             var endDate = DateTime.UtcNow.Date;
@@ -426,7 +424,7 @@ select sum(s.`Value`) from (
             return GetTimelineStats(connection, keyMaps);
         }
 
-        private Dictionary<DateTime, long> GetTimelineStats(MySqlConnection connection,
+        private Dictionary<DateTime, long> GetTimelineStats(IDbConnection connection,
             IDictionary<string, DateTime> keyMaps)
         {
             var valuesMap = connection.Query(
@@ -450,7 +448,7 @@ select sum(s.`Value`) from (
         }
 
         private JobList<EnqueuedJobDto> EnqueuedJobs(
-            MySqlConnection connection,
+            IDbConnection connection,
             IEnumerable<int> jobIds)
         {
             var enumerable = jobIds as int[] ?? jobIds.ToArray();
@@ -485,7 +483,7 @@ left join State s on s.Id = j.StateId ";
         }
 
         private JobList<FetchedJobDto> FetchedJobs(
-            MySqlConnection connection,
+            IDbConnection connection,
             IEnumerable<int> jobIds)
         {
             string fetchedJobsSql = @"
@@ -516,7 +514,7 @@ where j.Id in @jobIds";
         }
 
         private Dictionary<DateTime, long> GetHourlyTimelineStats(
-            MySqlConnection connection,
+            IDbConnection connection,
             string type)
         {
             var endDate = DateTime.UtcNow;

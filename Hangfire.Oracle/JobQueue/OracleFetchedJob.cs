@@ -9,19 +9,19 @@ using Hangfire.Storage;
 
 namespace Hangfire.Oracle.Core.JobQueue
 {
-    internal class MySqlFetchedJob : IFetchedJob
+    internal class OracleFetchedJob : IFetchedJob
     {
-        private static readonly ILog Logger = LogProvider.GetLogger(typeof(MySqlFetchedJob));
+        private static readonly ILog Logger = LogProvider.GetLogger(typeof(OracleFetchedJob));
 
-        private readonly MySqlStorage _storage;
+        private readonly OracleStorage _storage;
         private readonly IDbConnection _connection;
         private readonly int _id;
         private bool _removedFromQueue;
         private bool _requeued;
         private bool _disposed;
 
-        public MySqlFetchedJob(
-            MySqlStorage storage, 
+        public OracleFetchedJob(
+            OracleStorage storage, 
             IDbConnection connection,
             FetchedJob fetchedJob)
         {

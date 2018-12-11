@@ -15,10 +15,10 @@ namespace Hangfire.Oracle.Core
         private const int NumberOfRecordsInSinglePass = 1000;
         private static readonly TimeSpan DelayBetweenPasses = TimeSpan.FromMilliseconds(500);
 
-        private readonly MySqlStorage _storage;
+        private readonly OracleStorage _storage;
         private readonly TimeSpan _interval;
 
-        public CountersAggregator(MySqlStorage storage, TimeSpan interval)
+        public CountersAggregator(OracleStorage storage, TimeSpan interval)
         {
             _storage = storage ?? throw new ArgumentNullException(nameof(storage));
             _interval = interval;

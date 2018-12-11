@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 
 using Dapper;
@@ -9,20 +10,18 @@ using Hangfire.Logging;
 using Hangfire.States;
 using Hangfire.Storage;
 
-using MySql.Data.MySqlClient;
-
 namespace Hangfire.Oracle.Core
 {
-    internal class MySqlWriteOnlyTransaction : JobStorageTransaction
+    internal class OracleWriteOnlyTransaction : JobStorageTransaction
     {
-        private static readonly ILog Logger = LogProvider.GetLogger(typeof(MySqlWriteOnlyTransaction));
+        private static readonly ILog Logger = LogProvider.GetLogger(typeof(OracleWriteOnlyTransaction));
 
-        private readonly MySqlStorage _storage;
+        private readonly OracleStorage _storage;
 
-        private readonly Queue<Action<MySqlConnection>> _commandQueue
-            = new Queue<Action<MySqlConnection>>();
+        private readonly Queue<Action<IDbConnection>> _commandQueue
+            = new Queue<Action<IDbConnection>>();
 
-        public MySqlWriteOnlyTransaction(MySqlStorage storage)
+        public OracleWriteOnlyTransaction(OracleStorage storage)
         {
 	        _storage = storage ?? throw new ArgumentNullException(nameof(storage));
         }
@@ -351,7 +350,7 @@ where lst.Key = @key
             });
         }
 
-        internal void QueueCommand(Action<MySqlConnection> action)
+        internal void QueueCommand(Action<IDbConnection> action)
         {
             _commandQueue.Enqueue(action);
         }
