@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace Hangfire.MySql.Core.JobQueue
+namespace Hangfire.Oracle.Core.JobQueue
 {
     public interface IPersistentJobQueueMonitoringApi
     {

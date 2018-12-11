@@ -1,4 +1,4 @@
-﻿namespace Hangfire.MySql.Core.JobQueue
+﻿namespace Hangfire.Oracle.Core.JobQueue
 {
     internal class FetchedJob
     {

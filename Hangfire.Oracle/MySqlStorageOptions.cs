@@ -1,9 +1,9 @@
 using System;
 using System.Data;
 
-namespace Hangfire.MySql.Core
+namespace Hangfire.Oracle.Core
 {
-    public  class MySqlStorageOptions
+    public class MySqlStorageOptions
     {
         private TimeSpan _queuePollInterval;
 
@@ -26,17 +26,15 @@ namespace Hangfire.MySql.Core
             get { return _queuePollInterval; }
             set
             {
-                var message = String.Format(
-                    "The QueuePollInterval property value should be positive. Given: {0}.",
-                    value);
+                var message = $"The QueuePollInterval property value should be positive. Given: {value}.";
 
                 if (value == TimeSpan.Zero)
                 {
-                    throw new ArgumentException(message, "value");
+                    throw new ArgumentException(message, nameof(value));
                 }
                 if (value != value.Duration())
                 {
-                    throw new ArgumentException(message, "value");
+                    throw new ArgumentException(message, nameof(value));
                 }
 
                 _queuePollInterval = value;

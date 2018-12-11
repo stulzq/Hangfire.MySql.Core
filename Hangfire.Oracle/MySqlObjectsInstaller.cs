@@ -1,18 +1,21 @@
 ﻿using System;
 using System.IO;
 using System.Reflection;
+
 using Dapper;
+
 using Hangfire.Logging;
+
 using MySql.Data.MySqlClient;
 
-namespace Hangfire.MySql.Core
+namespace Hangfire.Oracle.Core
 {
     public static class MySqlObjectsInstaller
     {
         private static readonly ILog Log = LogProvider.GetLogger(typeof(MySqlStorage));
         public static void Install(MySqlConnection connection)
         {
-            if (connection == null) throw new ArgumentNullException("connection");
+            if (connection == null) throw new ArgumentNullException(nameof(connection));
 
             if (TablesExists(connection))
             {
@@ -22,7 +25,7 @@ namespace Hangfire.MySql.Core
 
             Log.Info("Start installing Hangfire SQL objects...");
 
-            var script = GetStringResource("Hangfire.MySql.Core.Install.sql");
+            var script = GetStringResource("Hangfire.Oracle.Core.Install.sql");
 
             connection.Execute(script);
 
@@ -31,7 +34,7 @@ namespace Hangfire.MySql.Core
 
         private static bool TablesExists(MySqlConnection connection)
         {
-            return connection.ExecuteScalar<string>("SHOW TABLES LIKE 'Job';") != null;            
+            return connection.ExecuteScalar<string>("SHOW TABLES LIKE 'Job';") != null;
         }
 
         private static string GetStringResource(string resourceName)
@@ -46,10 +49,7 @@ namespace Hangfire.MySql.Core
             {
                 if (stream == null)
                 {
-                    throw new InvalidOperationException(String.Format(
-                        "Requested resource `{0}` was not found in the assembly `{1}`.",
-                        resourceName,
-                        assembly));
+                    throw new InvalidOperationException($"Requested resource `{resourceName}` was not found in the assembly `{assembly}`.");
                 }
 
                 using (var reader = new StreamReader(stream))

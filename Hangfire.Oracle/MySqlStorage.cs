@@ -3,19 +3,21 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Text;
+
 using Hangfire.Annotations;
 using Hangfire.Logging;
-using Hangfire.MySql.Core.JobQueue;
-using Hangfire.MySql.Core.Monitoring;
+using Hangfire.Oracle.Core.JobQueue;
+using Hangfire.Oracle.Core.Monitoring;
 using Hangfire.Server;
 using Hangfire.Storage;
+
 using MySql.Data.MySqlClient;
 
-namespace Hangfire.MySql.Core
+namespace Hangfire.Oracle.Core
 {
     public class MySqlStorage : JobStorage, IDisposable
     {
-        private static readonly ILog Logger = LogProvider.GetLogger(typeof (MySqlStorage));
+        private static readonly ILog Logger = LogProvider.GetLogger(typeof(MySqlStorage));
 
         private readonly string _connectionString;
         private readonly MySqlConnection _existingConnection;
@@ -30,8 +32,15 @@ namespace Hangfire.MySql.Core
 
         public MySqlStorage(string connectionString, MySqlStorageOptions options)
         {
-            if (connectionString == null) throw new ArgumentNullException("connectionString");
-            if (options == null) throw new ArgumentNullException("options");
+            if (connectionString == null)
+            {
+                throw new ArgumentNullException(nameof(connectionString));
+            }
+
+            if (options == null)
+            {
+                throw new ArgumentNullException(nameof(options));
+            }
 
             if (IsConnectionString(connectionString))
             {
@@ -50,10 +59,7 @@ namespace Hangfire.MySql.Core
             }
             else
             {
-                throw new ArgumentException(
-                    string.Format(
-                        "Could not find connection string with name '{0}' in application config file",
-                        connectionString));
+                throw new ArgumentException($"Could not find connection string with name '{connectionString}' in application config file");
             }
             _options = options;
 
@@ -80,7 +86,7 @@ namespace Hangfire.MySql.Core
 
         internal MySqlStorage(MySqlConnection existingConnection)
         {
-	        _existingConnection = existingConnection ?? throw new ArgumentNullException("existingConnection");
+            _existingConnection = existingConnection ?? throw new ArgumentNullException(nameof(existingConnection));
             _options = new MySqlStorageOptions();
 
             InitializeQueueProviders();
@@ -88,7 +94,7 @@ namespace Hangfire.MySql.Core
 
         private void InitializeQueueProviders()
         {
-            QueueProviders = 
+            QueueProviders =
                 new PersistentJobQueueProviderCollection(
                     new MySqlJobQueueProvider(this, _options));
         }
@@ -113,7 +119,7 @@ namespace Hangfire.MySql.Core
             {
                 var parts = _connectionString.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries)
                     .Select(x => x.Split(new[] { '=' }, StringSplitOptions.RemoveEmptyEntries))
-                    .Select(x => new { Key = x[0].Trim(), Value = x.Length>1? x[1].Trim():"" })
+                    .Select(x => new { Key = x[0].Trim(), Value = x.Length > 1 ? x[1].Trim() : "" })
                     .ToDictionary(x => x.Key, x => x.Value, StringComparer.OrdinalIgnoreCase);
 
                 var builder = new StringBuilder();
@@ -139,7 +145,7 @@ namespace Hangfire.MySql.Core
                 }
 
                 return builder.Length != 0
-                    ? String.Format("Server: {0}", builder)
+                    ? $"Server: {builder}"
                     : canNotParseMessage;
             }
             catch (Exception ex)
@@ -187,7 +193,7 @@ namespace Hangfire.MySql.Core
                 }
             });
         }
-        
+
         internal void UseConnection([InstantHandle] Action<MySqlConnection> action)
         {
             UseConnection(connection =>
@@ -221,7 +227,7 @@ namespace Hangfire.MySql.Core
 
             var connection = new MySqlConnection(_connectionString);
             connection.Open();
-            
+
             return connection;
         }
 

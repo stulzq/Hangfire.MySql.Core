@@ -2,17 +2,20 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
+
 using Dapper;
+
 using Hangfire.Annotations;
 using Hangfire.Common;
-using Hangfire.MySql.Core.Entities;
-using Hangfire.MySql.Core.JobQueue;
+using Hangfire.Oracle.Core.Entities;
+using Hangfire.Oracle.Core.JobQueue;
 using Hangfire.States;
 using Hangfire.Storage;
 using Hangfire.Storage.Monitoring;
+
 using MySql.Data.MySqlClient;
 
-namespace Hangfire.MySql.Core.Monitoring
+namespace Hangfire.Oracle.Core.Monitoring
 {
     internal class MySqlMonitoringApi : IMonitoringApi
     {
@@ -21,11 +24,10 @@ namespace Hangfire.MySql.Core.Monitoring
 
         public MySqlMonitoringApi([NotNull] MySqlStorage storage, int? jobListLimit)
         {
-            if (storage == null) throw new ArgumentNullException("storage");
-
-            _storage = storage;
+            _storage = storage ?? throw new ArgumentNullException(nameof(storage));
             _jobListLimit = jobListLimit;
         }
+
         public IList<QueueWithTopEnqueuedJobsDto> Queues()
         {
             var tuples = _storage.QueueProviders
@@ -59,7 +61,7 @@ namespace Hangfire.MySql.Core.Monitoring
         {
             return UseConnection<IList<ServerDto>>(connection =>
             {
-                var servers = 
+                var servers =
                     connection.Query<Entities.Server>("select * from Server").ToList();
 
                 var result = new List<ServerDto>();
@@ -133,17 +135,17 @@ select sum(s.`Value`) from (
     select `Value` from AggregatedCounter where `Key` = @key
 ) as s;";
 
-            var statistics = 
-                UseConnection(connection => 
+            var statistics =
+                UseConnection(connection =>
                     new StatisticsDto
                     {
-                        Enqueued = connection.ExecuteScalar<int>(jobQuery, new {stateName = "Enqueued"}),
-                        Failed = connection.ExecuteScalar<int>(jobQuery, new {stateName = "Failed"}),
-                        Processing = connection.ExecuteScalar<int>(jobQuery, new {stateName = "Processing"}),
-                        Scheduled = connection.ExecuteScalar<int>(jobQuery, new {stateName = "Scheduled"}),
+                        Enqueued = connection.ExecuteScalar<int>(jobQuery, new { stateName = "Enqueued" }),
+                        Failed = connection.ExecuteScalar<int>(jobQuery, new { stateName = "Failed" }),
+                        Processing = connection.ExecuteScalar<int>(jobQuery, new { stateName = "Processing" }),
+                        Scheduled = connection.ExecuteScalar<int>(jobQuery, new { stateName = "Scheduled" }),
                         Servers = connection.ExecuteScalar<int>("select count(Id) from Server"),
-                        Succeeded = connection.ExecuteScalar<int>(succeededQuery, new {key = "stats:succeeded"}),
-                        Deleted = connection.ExecuteScalar<int>(succeededQuery, new {key = "stats:deleted"}),
+                        Succeeded = connection.ExecuteScalar<int>(succeededQuery, new { key = "stats:succeeded" }),
+                        Deleted = connection.ExecuteScalar<int>(succeededQuery, new { key = "stats:deleted" }),
                         Recurring =
                             connection.ExecuteScalar<int>("select count(*) from `Set` where `Key` = 'recurring-jobs'")
                     });
@@ -352,8 +354,7 @@ select sum(s.`Value`) from (
             string stateName,
             Func<SqlJob, Job, Dictionary<string, string>, TDto> selector)
         {
-            string jobsSql =
-@"select * from (
+            const string jobsSql = @"select * from (
   select j.*, s.Reason as StateReason, s.Data as StateData, @rownum := @rownum + 1 AS rankvalue
   from Job j
     cross join (SELECT @rownum := 0) r
@@ -362,7 +363,7 @@ select sum(s.`Value`) from (
   order by j.Id desc
 ) as j where j.rankvalue between @start and @end ";
 
-            var jobs = 
+            var jobs =
                 connection.Query<SqlJob>(
                     jobsSql,
                     new { stateName = stateName, start = @from + 1, end = @from + count })
@@ -420,7 +421,7 @@ select sum(s.`Value`) from (
                 endDate = endDate.AddDays(-1);
             }
 
-            var keyMaps = dates.ToDictionary(x => String.Format("stats:{0}:{1}", type, x.ToString("yyyy-MM-dd")), x => x);
+            var keyMaps = dates.ToDictionary(x => $"stats:{type}:{x:yyyy-MM-dd}", x => x);
 
             return GetTimelineStats(connection, keyMaps);
         }
@@ -453,12 +454,12 @@ select sum(s.`Value`) from (
             IEnumerable<int> jobIds)
         {
             var enumerable = jobIds as int[] ?? jobIds.ToArray();
-            string enqueuedJobsSql = 
+            string enqueuedJobsSql =
 @"select j.*, s.Reason as StateReason, s.Data as StateData 
 from Job j
 left join State s on s.Id = j.StateId
 where j.Id in @jobIds";
-            
+
             if (!enumerable.Any())
             {
                 enqueuedJobsSql =
@@ -526,7 +527,7 @@ where j.Id in @jobIds";
                 endDate = endDate.AddHours(-1);
             }
 
-            var keyMaps = dates.ToDictionary(x => String.Format("stats:{0}:{1}", type, x.ToString("yyyy-MM-dd-HH")), x => x);
+            var keyMaps = dates.ToDictionary(x => $"stats:{type}:{x:yyyy-MM-dd-HH}", x => x);
 
             return GetTimelineStats(connection, keyMaps);
         }

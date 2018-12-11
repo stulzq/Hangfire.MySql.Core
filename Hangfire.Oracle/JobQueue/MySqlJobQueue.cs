@@ -2,12 +2,15 @@
 using System.Data;
 using System.Linq;
 using System.Threading;
+
 using Dapper;
+
 using Hangfire.Logging;
 using Hangfire.Storage;
+
 using MySql.Data.MySqlClient;
 
-namespace Hangfire.MySql.Core.JobQueue
+namespace Hangfire.Oracle.Core.JobQueue
 {
     internal class MySqlJobQueue : IPersistentJobQueue
     {
@@ -17,17 +20,17 @@ namespace Hangfire.MySql.Core.JobQueue
         private readonly MySqlStorageOptions _options;
         public MySqlJobQueue(MySqlStorage storage, MySqlStorageOptions options)
         {
-	        _storage = storage ?? throw new ArgumentNullException("storage");
-            _options = options ?? throw new ArgumentNullException("options");
+	        _storage = storage ?? throw new ArgumentNullException(nameof(storage));
+            _options = options ?? throw new ArgumentNullException(nameof(options));
         }
 
         public IFetchedJob Dequeue(string[] queues, CancellationToken cancellationToken)
         {
-            if (queues == null) throw new ArgumentNullException("queues");
-            if (queues.Length == 0) throw new ArgumentException("Queue array must be non-empty.", "queues");
+            if (queues == null) throw new ArgumentNullException(nameof(queues));
+            if (queues.Length == 0) throw new ArgumentException("Queue array must be non-empty.", nameof(queues));
 
             FetchedJob fetchedJob = null;
-            MySqlConnection connection = null;
+            MySqlConnection connection;
 
             do
             {
@@ -38,9 +41,9 @@ namespace Hangfire.MySql.Core.JobQueue
                 {
                     using (new MySqlDistributedLock(_storage, "JobQueue", TimeSpan.FromSeconds(30)))
                     {
-                        string token = Guid.NewGuid().ToString();
+                        var token = Guid.NewGuid().ToString();
 
-                        int nUpdated = connection.Execute(
+                        var nUpdated = connection.Execute(
                             "update JobQueue set FetchedAt = UTC_TIMESTAMP(), FetchToken = @fetchToken " +
                             "where (FetchedAt is null or FetchedAt < DATE_ADD(UTC_TIMESTAMP(), INTERVAL @timeout SECOND)) " +
                             "   and Queue in @queues " +

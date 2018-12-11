@@ -1,10 +1,12 @@
 using System;
 using System.Data;
 using System.Threading;
+
 using Dapper;
+
 using Hangfire.Logging;
 
-namespace Hangfire.MySql.Core
+namespace Hangfire.Oracle.Core
 {
     public class MySqlDistributedLock : IDisposable, IComparable
     {
@@ -43,9 +45,7 @@ namespace Hangfire.MySql.Core
             _start = DateTime.UtcNow;
         }
 
-        public string Resource {
-            get { return _resource; }
-        }
+        public string Resource => _resource;
 
         private int AcquireLock(string resource, TimeSpan timeout)
         {

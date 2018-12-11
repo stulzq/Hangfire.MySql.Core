@@ -1,0 +1,34 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>netstandard2.0</TargetFrameworks>
+    <Description>Hangfire's Oracle storage.</Description>
+    <PackageId>Hangfire.Oracle.Core</PackageId>
+    <Product>Hangfire.Oracle.Core</Product>
+    <Company>akoylu</Company>
+    <Authors>akoylu</Authors>
+    <Owners>Arnoldas Gudas</Owners>
+    <PackageLicenseUrl>https://github.com/akoylu/Hangfire.Oracle.Core/blob/master/License.md</PackageLicenseUrl>
+    <PackageProjectUrl>https://github.com/stulzq/Hangfire.Oracle.Core</PackageProjectUrl>
+    <Copyright>Copyright 2018</Copyright>
+    <PackageTags>Hangfire Oracle Hangfire.Oracle Hangfire.MySql.Core</PackageTags>
+    <Version>1.0.0</Version>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <AssemblyName>Hangfire.Oracle.Core</AssemblyName>
+    <RootNamespace>Hangfire.Oracle.Core</RootNamespace>
+    <PackageReleaseNotes></PackageReleaseNotes>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Remove="Install.sql" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Install.sql" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CSharp" Version="4.5.0" />
+    <PackageReference Include="MySqlConnector" Version="0.45.1" />
+    <PackageReference Include="Newtonsoft.Json" Version="11.0.2" />
+    <PackageReference Include="Dapper" Version="1.50.5" />
+    <PackageReference Include="Hangfire.Core" Version="1.6.20" />
+  </ItemGroup>
+</Project>

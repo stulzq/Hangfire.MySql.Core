@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Hangfire.MySql.Core.Entities
+namespace Hangfire.Oracle.Core.Entities
 {
     internal class SqlState
     {

@@ -1,14 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+
 using Dapper;
+
 using Hangfire.Common;
 using Hangfire.Logging;
 using Hangfire.States;
 using Hangfire.Storage;
+
 using MySql.Data.MySqlClient;
 
-namespace Hangfire.MySql.Core
+namespace Hangfire.Oracle.Core
 {
     internal class MySqlWriteOnlyTransaction : JobStorageTransaction
     {
@@ -21,7 +24,7 @@ namespace Hangfire.MySql.Core
 
         public MySqlWriteOnlyTransaction(MySqlStorage storage)
         {
-	        _storage = storage ?? throw new ArgumentNullException("storage");
+	        _storage = storage ?? throw new ArgumentNullException(nameof(storage));
         }
 
         public override void ExpireJob(string jobId, TimeSpan expireIn)
@@ -164,8 +167,8 @@ namespace Hangfire.MySql.Core
         {
             Logger.TraceFormat("AddRangeToSet key={0}", key);
 
-            if (key == null) throw new ArgumentNullException("key");
-            if (items == null) throw new ArgumentNullException("items");
+            if (key == null) throw new ArgumentNullException(nameof(key));
+            if (items == null) throw new ArgumentNullException(nameof(items));
 
             AcquireSetLock();
             QueueCommand(x => 
@@ -189,7 +192,7 @@ namespace Hangfire.MySql.Core
         {
             Logger.TraceFormat("ExpireSet key={0} expirein={1}", key, expireIn);
 
-            if (key == null) throw new ArgumentNullException("key");
+            if (key == null) throw new ArgumentNullException(nameof(key));
 
             AcquireSetLock();
             QueueCommand(x => 
@@ -211,7 +214,7 @@ namespace Hangfire.MySql.Core
 
         public override void ExpireList(string key, TimeSpan expireIn)
         {
-            if (key == null) throw new ArgumentNullException("key");
+            if (key == null) throw new ArgumentNullException(nameof(key));
 
             Logger.TraceFormat("ExpireList key={0} expirein={1}", key, expireIn);
 
@@ -253,7 +256,7 @@ where lst.Key = @key
         {
             Logger.TraceFormat("PersistHash key={0} ", key);
 
-            if (key == null) throw new ArgumentNullException("key");
+            if (key == null) throw new ArgumentNullException(nameof(key));
 
             AcquireHashLock();
             QueueCommand(x => 
@@ -265,7 +268,7 @@ where lst.Key = @key
         {
             Logger.TraceFormat("PersistSet key={0} ", key);
 
-            if (key == null) throw new ArgumentNullException("key");
+            if (key == null) throw new ArgumentNullException(nameof(key));
 
             AcquireSetLock();
             QueueCommand(x => 
@@ -277,7 +280,7 @@ where lst.Key = @key
         {
             Logger.TraceFormat("RemoveSet key={0} ", key);
 
-            if (key == null) throw new ArgumentNullException("key");
+            if (key == null) throw new ArgumentNullException(nameof(key));
 
             AcquireSetLock();
             QueueCommand(x => 
@@ -289,7 +292,7 @@ where lst.Key = @key
         {
             Logger.TraceFormat("PersistList key={0} ", key);
 
-            if (key == null) throw new ArgumentNullException("key");
+            if (key == null) throw new ArgumentNullException(nameof(key));
 
             AcquireListLock();
             QueueCommand(x => 
@@ -301,8 +304,8 @@ where lst.Key = @key
         {
             Logger.TraceFormat("SetRangeInHash key={0} ", key);
 
-            if (key == null) throw new ArgumentNullException("key");
-            if (keyValuePairs == null) throw new ArgumentNullException("keyValuePairs");
+            if (key == null) throw new ArgumentNullException(nameof(key));
+            if (keyValuePairs == null) throw new ArgumentNullException(nameof(keyValuePairs));
 
             AcquireHashLock();
             QueueCommand(x => 
@@ -317,7 +320,7 @@ where lst.Key = @key
         {
             Logger.TraceFormat("ExpireHash key={0} ", key);
 
-            if (key == null) throw new ArgumentNullException("key");
+            if (key == null) throw new ArgumentNullException(nameof(key));
 
             AcquireHashLock();
             QueueCommand(x => 
@@ -330,7 +333,7 @@ where lst.Key = @key
         {
             Logger.TraceFormat("RemoveHash key={0} ", key);
 
-            if (key == null) throw new ArgumentNullException("key");
+            if (key == null) throw new ArgumentNullException(nameof(key));
 
             AcquireHashLock();
             QueueCommand(x => x.Execute(
@@ -341,7 +344,7 @@ where lst.Key = @key
         {
             _storage.UseTransaction(connection =>
             {
-                foreach (Action<MySqlConnection> command in _commandQueue)
+                foreach (var command in _commandQueue)
                 {
                     command(connection);
                 }
@@ -355,32 +358,32 @@ where lst.Key = @key
         
         private void AcquireJobLock()
         {
-            AcquireLock(String.Format("Job"));
+            AcquireLock("Job");
         }
 
         private void AcquireSetLock()
         {
-            AcquireLock(String.Format("Set"));
+            AcquireLock("Set");
         }
         
         private void AcquireListLock()
         {
-            AcquireLock(String.Format("List"));
+            AcquireLock("List");
         }
 
         private void AcquireHashLock()
         {
-            AcquireLock(String.Format("Hash"));
+            AcquireLock("Hash");
         }
         
         private void AcquireStateLock()
         {
-            AcquireLock(String.Format("State"));
+            AcquireLock("State");
         }
 
         private void AcquireCounterLock()
         {
-            AcquireLock(String.Format("Counter"));
+            AcquireLock("Counter");
         }
         private void AcquireLock(string resource)
         {

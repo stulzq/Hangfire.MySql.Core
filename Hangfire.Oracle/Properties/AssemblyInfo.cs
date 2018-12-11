@@ -1,3 +1,3 @@
 ﻿using System.Runtime.CompilerServices;
 
-[assembly: InternalsVisibleTo("Hangfire.MySql.Core")]
+[assembly: InternalsVisibleTo("Hangfire.Oracle.Core")]

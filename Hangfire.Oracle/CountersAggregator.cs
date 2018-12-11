@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Threading;
+
 using Dapper;
+
 using Hangfire.Logging;
 using Hangfire.Server;
 
-namespace Hangfire.MySql.Core
+namespace Hangfire.Oracle.Core
 {
     internal class CountersAggregator : IServerComponent
     {
@@ -18,9 +20,7 @@ namespace Hangfire.MySql.Core
 
         public CountersAggregator(MySqlStorage storage, TimeSpan interval)
         {
-            if (storage == null) throw new ArgumentNullException("storage");
-
-            _storage = storage;
+            _storage = storage ?? throw new ArgumentNullException(nameof(storage));
             _interval = interval;
         }
 
@@ -28,7 +28,7 @@ namespace Hangfire.MySql.Core
         {
             Logger.DebugFormat("Aggregating records in 'Counter' table...");
 
-            int removedCount = 0;
+            var removedCount = 0;
 
             do
             {

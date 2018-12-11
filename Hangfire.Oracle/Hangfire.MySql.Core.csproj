@@ -1,34 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <TargetFrameworks>netstandard2.0</TargetFrameworks>
-    <Description>Hangfire's mysql storage.</Description>
-    <PackageId>Hangfire.MySql.Core</PackageId>
-    <Product>Hangfire.MySql.Core</Product>
-    <Company>stulzq</Company>
-    <Authors>stulzq</Authors>
-    <Owners>Arnoldas Gudas</Owners>
-    <PackageLicenseUrl>https://github.com/stulzq/Hangfire.MySql.Core/blob/master/License.md</PackageLicenseUrl>
-    <PackageProjectUrl>https://github.com/stulzq/Hangfire.MySql.Core</PackageProjectUrl>
-    <Copyright>Copyright 2017-2018</Copyright>
-    <PackageTags>Hangfire MySql Hangfire.MySql Hangfire.MySql.Core</PackageTags>
-    <Version>2.1.8</Version>
-    <AssemblyVersion>2.1.8.0</AssemblyVersion>
-    <AssemblyName>Hangfire.MySql.Core</AssemblyName>
-    <RootNamespace>Hangfire.MySql.Core</RootNamespace>
-    <PackageReleaseNotes></PackageReleaseNotes>
-  </PropertyGroup>
-  <ItemGroup>
-    <None Remove="Install.sql" />
-  </ItemGroup>
-  <ItemGroup>
-    <EmbeddedResource Include="Install.sql" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Microsoft.CSharp" Version="4.5.0" />
-    <PackageReference Include="MySqlConnector" Version="0.45.1" />
-    <PackageReference Include="Newtonsoft.Json" Version="11.0.2" />
-    <PackageReference Include="Dapper" Version="1.50.5" />
-    <PackageReference Include="Hangfire.Core" Version="1.6.20" />
-  </ItemGroup>
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup />
 </Project>

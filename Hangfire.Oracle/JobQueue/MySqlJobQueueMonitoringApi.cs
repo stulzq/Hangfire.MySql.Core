@@ -1,9 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+
 using Dapper;
 
-namespace Hangfire.MySql.Core.JobQueue
+namespace Hangfire.Oracle.Core.JobQueue
 {
     internal class MySqlJobQueueMonitoringApi : IPersistentJobQueueMonitoringApi
     {
@@ -15,8 +16,7 @@ namespace Hangfire.MySql.Core.JobQueue
         private readonly MySqlStorage _storage;
         public MySqlJobQueueMonitoringApi(MySqlStorage storage)
         {
-            if (storage == null) throw new ArgumentNullException("storage");
-            _storage = storage;
+            _storage = storage ?? throw new ArgumentNullException(nameof(storage));
         }
 
         public IEnumerable<string> GetQueues()
@@ -40,7 +40,7 @@ namespace Hangfire.MySql.Core.JobQueue
 
         public IEnumerable<int> GetEnqueuedJobIds(string queue, int @from, int perPage)
         {
-            string sqlQuery = @"
+            const string sqlQuery = @"
 SET @rank=0;
 select r.JobId from (
   select jq.JobId, @rank := @rank+1 AS rankvalue 
