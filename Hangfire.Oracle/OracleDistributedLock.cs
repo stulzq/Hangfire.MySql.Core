@@ -33,8 +33,7 @@ namespace Hangfire.Oracle.Core
         {
         }
 
-        public OracleDistributedLock(
-            IDbConnection connection, string resource, TimeSpan timeout, CancellationToken cancellationToken)
+        public OracleDistributedLock(IDbConnection connection, string resource, TimeSpan timeout, CancellationToken cancellationToken)
         {
             Logger.TraceFormat("OracleDistributedLock resource={0}, timeout={1}", resource, timeout);
 
@@ -52,17 +51,18 @@ namespace Hangfire.Oracle.Core
             return
                 _connection
                     .Execute(
-                        " INSERT INTO MISP.HF_DISTRIBUTED_LOCK (RESOURCE, CREATED_AT) " +
-                        "   (SELECT :RESOURCE, :NOW " +
-                        "    FROM dual " +
-                        "    WHERE NOT EXISTS ( " +
-                        "         SELECT RESOURCE, CREATED_AT " +
-                        "           FROM MISP.HF_DISTRIBUTED_LOCK " +
-                        "         WHERE RESOURCE = :RESOURCE " +
-                        "         AND CREATED_AT > :EXPIRED))", 
+                        @" 
+INSERT INTO MISP.HF_DISTRIBUTED_LOCK (""RESOURCE"", CREATED_AT)
+                (SELECT :RES, :NOW
+                FROM DUAL
+                WHERE NOT EXISTS
+            (SELECT ""RESOURCE"", CREATED_AT
+                FROM MISP.HF_DISTRIBUTED_LOCK
+                WHERE ""RESOURCE"" = :RES AND CREATED_AT > :EXPIRED))
+", 
                         new
                         {
-                            RESOURCE = resource,
+                            RES = resource,
                             NOW = DateTime.UtcNow,
                             EXPIRED = DateTime.UtcNow.Add(timeout.Negate())
                         });
@@ -114,11 +114,13 @@ namespace Hangfire.Oracle.Core
 
             _connection
                 .Execute(
-                    " DELETE FROM MISP.HF_DISTRIBUTED_LOCK " +
-                    "  WHERE RESOURCE = :RESOURCE",
+                    @"
+DELETE FROM MISP.HF_DISTRIBUTED_LOCK 
+ WHERE ""RESOURCE"" = :RES
+",
                     new
                     {
-                        RESOURCE = _resource
+                        RES = _resource
                     });
         }
 

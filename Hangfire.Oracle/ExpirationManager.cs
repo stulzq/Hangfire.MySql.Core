@@ -56,7 +56,7 @@ namespace Hangfire.Oracle.Core
                     {
                         try
                         {
-                            Logger.DebugFormat("DELETE FROM `{0}` WHERE EXPIRE_AT < :NOW WHERE ROWNUM < :COUNT", table);
+                            Logger.DebugFormat("DELETE FROM `{0}` WHERE EXPIRE_AT < :NOW AND ROWNUM <= :COUNT", table);
 
                             using (
                                 new OracleDistributedLock(
@@ -66,7 +66,7 @@ namespace Hangfire.Oracle.Core
                                     cancellationToken).Acquire())
                             {
                                 removedCount = connection.Execute(
-                                    $"DELETE FROM MISP.{table} WHERE EXPIRE_AT < :NOW WHERE ROWNUM < :COUNT",
+                                    $"DELETE FROM MISP.{table} WHERE EXPIRE_AT < :NOW AND ROWNUM <= :COUNT",
                                     new { NOW = DateTime.UtcNow, COUNT = NumberOfRecordsInSinglePass });
                             }
 

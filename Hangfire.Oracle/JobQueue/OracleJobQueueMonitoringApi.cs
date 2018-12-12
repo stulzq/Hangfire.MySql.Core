@@ -27,7 +27,7 @@ namespace Hangfire.Oracle.Core.JobQueue
                 {
                     var result = _storage.UseConnection(connection =>
                     {
-                        return connection.Query("SELECT DISTINCT(QUEUE) as Queue FROM MISP.HF_JOB_QUEUE").Select(x => (string)x.Queue).ToList();
+                        return connection.Query("SELECT DISTINCT(QUEUE) as QUEUE FROM MISP.HF_JOB_QUEUE").Select(x => (string)x.QUEUE).ToList();
                     });
 
                     _queuesCache = result;
@@ -40,21 +40,16 @@ namespace Hangfire.Oracle.Core.JobQueue
 
         public IEnumerable<int> GetEnqueuedJobIds(string queue, int @from, int perPage)
         {
-            // TODO: QUERY fix
             const string sqlQuery = @"
-SET @rank=0;
-select r.JobId from (
-  select jq.JobId, @rank := @rank+1 AS rankvalue 
-  from JobQueue jq
-  where jq.Queue = @queue
-  order by jq.Id
-) as r
-where r.rankvalue between @start and @end;";
+SELECT JOB_ID AS JobId
+  FROM (SELECT JOB_ID, RANK () OVER (ORDER BY ID) AS RANK
+          FROM MISP.HF_JOB_QUEUE
+         WHERE QUEUE = :QUEUE)
+ WHERE RANK BETWEEN :S AND :E
+";
 
             return _storage.UseConnection(connection =>
-                connection.Query<int>(
-                    sqlQuery,
-                    new {queue = queue, start = @from + 1, end = @from + perPage}));
+                connection.Query<int>(sqlQuery, new { QUEUE = queue, S = @from + 1, E = @from + perPage }));
         }
 
         public IEnumerable<int> GetFetchedJobIds(string queue, int @from, int perPage)

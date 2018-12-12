@@ -56,9 +56,14 @@ namespace Hangfire.Oracle.Core
 
             var stateId = _storage.UseConnection(connection => connection.GetNextId());
             QueueCommand(x => x.Execute(
-                " INSERT INTO MISP.HF_JOB_STATE (ID, JOB_ID, NAME, REASON, CREATED_AT, DATA) " +
-                "      VALUES (:STATE_ID, :JOB_ID, :NAME, :REASON, :CREATED_AT, :DATA); " +
-                "      UPDATE MISP.HF_JOB SET STATE_ID = :STATE_ID, STATE_NAME = :NAME WHERE ID = :ID;",
+                @"
+BEGIN
+ INSERT INTO MISP.HF_JOB_STATE (ID, JOB_ID, NAME, REASON, CREATED_AT, DATA)
+      VALUES (:STATE_ID, :JOB_ID, :NAME, :REASON, :CREATED_AT, :DATA);
+ 
+      UPDATE MISP.HF_JOB SET STATE_ID = :STATE_ID, STATE_NAME = :NAME WHERE ID = :ID;
+END;
+",
                 new
                 {
                     STATE_ID = stateId,

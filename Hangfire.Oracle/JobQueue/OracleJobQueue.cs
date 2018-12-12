@@ -1,12 +1,10 @@
 ﻿using System;
 using System.Data;
-using System.Linq;
 using System.Threading;
 
 using Dapper;
 
 using Hangfire.Logging;
-using Hangfire.Oracle.Core.Entities;
 using Hangfire.Storage;
 
 using Oracle.ManagedDataAccess.Client;
@@ -44,13 +42,11 @@ namespace Hangfire.Oracle.Core.JobQueue
                     {
                         var token = Guid.NewGuid().ToString();
 
-                        // TODO: QUERY fix interval
-                        var nUpdated = connection.Execute(
-                            "UPDATE MISP.HF_JOB_QUEUE " +
-                            "   SET FETCHED_AT = SYS_EXTRACT_UTC(SYSTIMESTAMP), FETCH_TOKEN = :FETCH_TOKEN " +
-                            " WHERE (FETCHED_AT IS NULL OR FETCHED_AT < SYS_EXTRACT_UTC(SYSTIMESTAMP) + INTERVAL '10' SECOND) " +
-                            "   AND QUEUE IN :QUEUES " +
-                            "   AND ROWNUM = 1;",
+                        var nUpdated = connection.Execute(@"
+UPDATE MISP.HF_JOB_QUEUE
+   SET FETCHED_AT = SYS_EXTRACT_UTC (SYSTIMESTAMP), FETCH_TOKEN = :FETCH_TOKEN
+ WHERE (FETCHED_AT IS NULL OR FETCHED_AT < SYS_EXTRACT_UTC (SYSTIMESTAMP) + numToDSInterval(:TIMEOUT, 'second' )) AND (QUEUE IN :QUEUES) AND ROWNUM = 1
+",
                             new
                             {
                                 QUEUES = queues,
@@ -63,9 +59,11 @@ namespace Hangfire.Oracle.Core.JobQueue
                             fetchedJob =
                                 connection
                                     .QuerySingle<FetchedJob>(
-                                        "SELECT ID as Id, JOB_ID as JobId, QUEUE as Queue " +
-                                        "  FROM MISP.HF_JOB_QUEUE " +
-                                        " WHERE FETCH_TOKEN = :FETCH_TOKEN;",
+                                        @"
+ SELECT ID as Id, JOB_ID as JobId, QUEUE as Queue
+   FROM MISP.HF_JOB_QUEUE
+  WHERE FETCH_TOKEN = :FETCH_TOKEN
+",
                                         new
                                         {
                                             FETCH_TOKEN = token

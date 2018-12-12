@@ -37,33 +37,17 @@ namespace Hangfire.Oracle.Core
                 throw new ArgumentNullException(nameof(connectionString));
             }
 
-            if (options == null)
-            {
-                throw new ArgumentNullException(nameof(options));
-            }
+            _options = options ?? throw new ArgumentNullException(nameof(options));
 
             if (IsConnectionString(connectionString))
             {
-                // TODO: Remove
-                if (!connectionString.ToLower().Contains("ignorecommandtransaction"))
-                {
-                    if (connectionString.Last() != ';')
-                    {
-                        connectionString += ";IgnoreCommandTransaction=true;";
-                    }
-                    else
-                    {
-                        connectionString += "IgnoreCommandTransaction=true;";
-                    }
-                }
                 _connectionString = connectionString;
             }
             else
             {
                 throw new ArgumentException($"Could not find connection string with name '{connectionString}' in application config file");
             }
-            _options = options;
-
+            
             if (options.PrepareSchemaIfNecessary)
             {
                 using (var connection = CreateAndOpenConnection())
@@ -186,7 +170,7 @@ namespace Hangfire.Oracle.Core
         {
             return UseConnection(connection =>
             {
-                using (var transaction = connection.BeginTransaction(isolationLevel ?? _options.TransactionIsolationLevel ?? IsolationLevel.ReadUncommitted))
+                using (var transaction = connection.BeginTransaction(isolationLevel ?? _options.TransactionIsolationLevel ?? IsolationLevel.ReadCommitted))
                 {
                     T result = func(connection);
                     transaction.Commit();

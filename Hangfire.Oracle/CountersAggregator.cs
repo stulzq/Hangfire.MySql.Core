@@ -4,7 +4,6 @@ using System.Threading;
 using Dapper;
 
 using Hangfire.Logging;
-using Hangfire.Oracle.Core.Entities;
 using Hangfire.Server;
 
 namespace Hangfire.Oracle.Core
@@ -35,7 +34,8 @@ namespace Hangfire.Oracle.Core
             {
                 _storage.UseConnection(connection =>
                 {
-                    removedCount = connection.Execute(GetAggregationQuery(), new { NOW = DateTime.UtcNow, COUNT = NumberOfRecordsInSinglePass });
+                    removedCount = connection.Execute(GetMergeQuery(), new { COUNT = NumberOfRecordsInSinglePass });
+                    //removedCount = connection.Execute(GetDeleteQuery(), new { COUNT = NumberOfRecordsInSinglePass });
                 });
 
                 if (removedCount >= NumberOfRecordsInSinglePass)
@@ -53,26 +53,42 @@ namespace Hangfire.Oracle.Core
             return GetType().ToString();
         }
 
-        private static string GetAggregationQuery()
+        private static string GetMergeQuery()
         {
             return @"
- MERGE INTO MISP.HF_AGGREGATED_COUNTER AC
-      USING (SELECT KEY, SUM(VALUE) AS VALUE, MAX(EXPIRE_AT) AS EXPIRE_AT 
-     FROM (
-             SELECT KEY, VALUE, EXPIRE_AT
-               FROM MISP.HF_COUNTER
-              WHERE ROWNUM < :COUNT) tmp
- 	GROUP BY KEY) C
-         ON AC.KEY = C.KEY
- WHEN MATCHED THEN
-      UPDATE SET AC.VALUE = AC.VALUE || C.VALUE,
-                 AC.EXPIRE_AT = GREATEST(AC.EXPIRE_AT, C.EXPIRE_AT)
- WHEN NOT MATCHED THEN
-      INSERT (ID, KEY, VALUE, EXPIRE_AT)
-      VALUES (MISP.HF_SEQUENCE.NEXTVAL, C.KEY, C.VALUE, C.EXPIRE_AT);
- 
+BEGIN
+    MERGE INTO MISP.HF_AGGREGATED_COUNTER AC
+         USING (  SELECT KEY, SUM (VALUE) AS VALUE, MAX (EXPIRE_AT) AS EXPIRE_AT
+                    FROM (SELECT KEY, VALUE, EXPIRE_AT
+                            FROM MISP.HF_COUNTER
+                           WHERE ROWNUM <= :COUNT) TMP
+                GROUP BY KEY) C
+            ON (AC.KEY = C.KEY)
+    WHEN MATCHED
+    THEN
+       UPDATE SET VALUE = VALUE + C.VALUE, EXPIRE_AT = GREATEST (EXPIRE_AT, C.EXPIRE_AT)
+    WHEN NOT MATCHED
+    THEN
+       INSERT     (ID
+                  ,KEY
+                  ,VALUE
+                  ,EXPIRE_AT)
+           VALUES (MISP.HF_SEQUENCE.NEXTVAL
+                  ,C.KEY
+                  ,C.VALUE
+                  ,C.EXPIRE_AT);
+
+   DELETE FROM MISP.HF_COUNTER
+    WHERE ROWNUM <= :COUNT;
+END;
+";
+        }
+
+        private static string GetDeleteQuery()
+        {
+            return @"
  DELETE FROM MISP.HF_COUNTER
-  WHERE ROWNUM < :COUNT;
+  WHERE ROWNUM <= :COUNT
 ";
         }
     }

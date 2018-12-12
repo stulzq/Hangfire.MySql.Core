@@ -255,8 +255,8 @@ namespace Hangfire.Oracle.Core
                 connection.Execute(
                     @"
  MERGE INTO MISP.HF_SERVER S
-      USING (SELECT * FROM MISP.HF_SERVER) SRC
-         ON (S.ID = SRC.ID)
+      USING (SELECT 1 FROM DUAL) SRC
+         ON (S.ID = :ID)
  WHEN MATCHED THEN
       UPDATE SET LAST_HEART_BEAT = :LAST_HEART_BEAT
  WHEN NOT MATCHED THEN
@@ -344,21 +344,15 @@ namespace Hangfire.Oracle.Core
                 throw new ArgumentNullException(nameof(key));
             }
 
-            // TODO: QUERY Fix
             return _storage.UseConnection(connection =>
-                connection
-                    .Query<string>(@"
-select `Value` 
-from (
-	    select `Value`, @rownum := @rownum + 1 AS rankvalue
-	    from `Set`,
-            (select @rownum := 0) r 
-        where `Key` = @key
-        order by Id
-     ) ranked
-where ranked.rankvalue between @startingFrom and @endingAt",
-                        new { key = key, startingFrom = startingFrom + 1, endingAt = endingAt + 1 })
-                    .ToList());
+                connection.Query<string>(@"
+SELECT VALUE as Value
+  FROM (SELECT VALUE, RANK () OVER (ORDER BY ID) AS RANK
+          FROM MISP.HF_SET
+         WHERE KEY = :KEY)
+ WHERE RANK BETWEEN :S AND :E
+",
+                        new { KEY = key, S = startingFrom + 1, E = endingAt + 1 }).ToList());
         }
 
         public override HashSet<string> GetAllItemsFromSet(string key)
@@ -396,14 +390,15 @@ where ranked.rankvalue between @startingFrom and @endingAt",
             return
                 _storage.UseConnection(connection =>
                     connection.QuerySingleOrDefault<string>(
-                        " SELECT * FROM (" +
-                        " SELECT VALUE AS Value " +
-                        "   FROM MISP.HF_SET " +
-                        "  WHERE KEY = :KEY " +
-                        "    AND SCORE BETWEEN :FROM AND :TO " +
-                        " ORDER BY SCORE) " +
-                        " WHERE ROWNUM = 1",
-                        new { KEY = key, FROM = fromScore, TO = toScore }));
+                        @"
+SELECT *
+  FROM (  SELECT VALUE AS VALUE
+            FROM MISP.HF_SET
+           WHERE KEY = :KEY AND SCORE BETWEEN :F AND :T
+        ORDER BY SCORE)
+ WHERE ROWNUM = 1
+",
+                        new { KEY = key, F = fromScore, T = toScore }));
         }
 
         public override long GetCounter(string key)
@@ -512,23 +507,18 @@ where ranked.rankvalue between @startingFrom and @endingAt",
                 throw new ArgumentNullException(nameof(key));
             }
 
-            // TODO: QUERY fix
             const string query = @"
-select `Value` 
-from (
-        select `Value`, @rownum := @rownum + 1 AS rankvalue
-	    from `List`,
-            (select @rownum := 0) r
-        where `Key` = @key
-        order by Id desc
-     ) ranked
-where ranked.rankvalue between @startingFrom and @endingAt";
+SELECT VALUE as Value
+  FROM (SELECT VALUE, RANK () OVER (ORDER BY ID DESC) AS RANK
+          FROM MISP.HF_LIST
+         WHERE KEY = :KEY)
+ WHERE RANK BETWEEN :S AND :E
+";
             return
                 _storage
                     .UseConnection(connection =>
-                        connection.Query<string>(
-                            query,
-                            new { key = key, startingFrom = startingFrom + 1, endingAt = endingAt + 1 })
+                        connection.Query<string>(query,
+                            new { KEY = key, S = startingFrom + 1, E = endingAt + 1 })
                             .ToList());
         }
 

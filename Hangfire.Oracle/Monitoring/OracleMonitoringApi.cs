@@ -12,6 +12,7 @@ using Hangfire.Oracle.Core.JobQueue;
 using Hangfire.States;
 using Hangfire.Storage;
 using Hangfire.Storage.Monitoring;
+using Oracle.ManagedDataAccess.Client;
 
 namespace Hangfire.Oracle.Core.Monitoring
 {
@@ -60,7 +61,7 @@ namespace Hangfire.Oracle.Core.Monitoring
             return UseConnection<IList<ServerDto>>(connection =>
             {
                 var servers =
-                    connection.Query<Entities.Server>("SELECT * FROM MISP.HF_SERVER").ToList();
+                    connection.Query<Entities.Server>("SELECT ID as ID, DATA as Data, LAST_HEART_BEAT as LastHeartBeat FROM MISP.HF_SERVER").ToList();
 
                 var result = new List<ServerDto>();
 
@@ -86,13 +87,47 @@ namespace Hangfire.Oracle.Core.Monitoring
             return UseConnection(connection =>
             {
                 const string sql = @"
- SELECT ID as Id, STATE_ID as StateId, STATE_NAME as StateName, INVOCATION_DATA as InvocationData, ARGUMENTS as Arguments, CREATED_AT as CreatedAt, EXPIRE_AT as ExpireAt FROM MISP.HF_JOB WHERE ID = :ID;
- SELECT ID as Id, NAME as Name, VALUE as Value, JOB_ID as JobId FROM MISP.HF_JOB_PARAMETER WHERE JOB_ID = :ID;
- SELECT ID as Id, JOB_ID as JobId, NAME as Name, REASON as Reason, CREATED_AT as CreatedAt, DATA as Data FROM MISP.HF_JOB_STATE where JOB_ID = :ID ORDER BY ID DESC;";
+BEGIN
+   OPEN :rslt1 FOR
+    SELECT ID              AS Id
+          ,STATE_ID        AS StateId
+          ,STATE_NAME      AS StateName
+          ,INVOCATION_DATA AS InvocationData
+          ,ARGUMENTS       AS Arguments
+          ,CREATED_AT      AS CreatedAt
+          ,EXPIRE_AT       AS ExpireAt
+      FROM MISP.HF_JOB
+     WHERE ID = :ID;
 
-                using (var multi = connection.QueryMultiple(sql, new { ID = jobId }))
+   OPEN :rslt2 FOR
+    SELECT ID     AS Id
+          ,NAME   AS Name
+          ,VALUE  AS Value
+          ,JOB_ID AS JobId
+      FROM MISP.HF_JOB_PARAMETER
+     WHERE JOB_ID = :ID;
+
+    OPEN :rslt3 FOR
+     SELECT ID       AS Id
+           ,JOB_ID   AS JobId
+           ,NAME     AS Name
+           ,REASON   AS Reason
+           ,CREATED_AT AS CreatedAt
+           ,DATA     AS Data
+       FROM MISP.HF_JOB_STATE
+      WHERE JOB_ID = :ID
+   ORDER BY ID DESC;
+END;
+";
+                var dynParams = new OracleDynamicParameters();
+                dynParams.Add(":rslt1", OracleDbType.RefCursor, ParameterDirection.Output);
+                dynParams.Add(":rslt2", OracleDbType.RefCursor, ParameterDirection.Output);
+                dynParams.Add(":rslt3", OracleDbType.RefCursor, ParameterDirection.Output);
+                dynParams.Add(":ID", OracleDbType.NVarchar2, ParameterDirection.Input, jobId);
+
+                using (var multi = connection.QueryMultiple(sql, dynParams))
                 {
-                    var job = multi.Read<SqlJob>().SingleOrDefault();
+                    var job = multi.ReadSingleOrDefault<SqlJob>();
                     if (job == null)
                     {
                         return null;
@@ -127,10 +162,14 @@ namespace Hangfire.Oracle.Core.Monitoring
         {
             const string jobQuery = "SELECT COUNT(ID) FROM MISP.HF_JOB WHERE STATE_NAME = :STATE_NAME";
             const string succeededQuery = @"
- SELECT SUM(S.VALUE) FROM (
-     SELECT SUM(VALUE) AS VALUE FROM MISP.HF_COUNTER WHERE KEY = :KEY
-     UNION ALL
-     SELECT VALUE FROM MISP.HF_AGGREGATED_COUNTER WHERE KEY = :KEY) AS S
+ SELECT SUM (VALUE)
+   FROM (SELECT SUM (VALUE) AS VALUE
+           FROM MISP.HF_COUNTER
+          WHERE KEY = :KEY
+         UNION ALL
+         SELECT VALUE
+           FROM MISP.HF_AGGREGATED_COUNTER
+          WHERE KEY = :KEY)
 ";
 
             var statistics =
@@ -144,8 +183,7 @@ namespace Hangfire.Oracle.Core.Monitoring
                         Servers = connection.ExecuteScalar<int>("SELECT COUNT(ID) FROM MISP.HF_SERVER"),
                         Succeeded = connection.ExecuteScalar<int>(succeededQuery, new { KEY = "stats:succeeded" }),
                         Deleted = connection.ExecuteScalar<int>(succeededQuery, new { KEY = "stats:deleted" }),
-                        Recurring =
-                            connection.ExecuteScalar<int>("SELECT COUNT(*) FROM MISP.HF_SET where KEY = 'recurring-jobs'")
+                        Recurring = connection.ExecuteScalar<int>("SELECT COUNT(*) FROM MISP.HF_SET where KEY = 'recurring-jobs'")
                     });
 
             statistics.Queues = _storage.QueueProviders
@@ -155,7 +193,7 @@ namespace Hangfire.Oracle.Core.Monitoring
             return statistics;
         }
 
-        public JobList<EnqueuedJobDto> EnqueuedJobs(string queue, int @from, int perPage)
+        public JobList<EnqueuedJobDto> EnqueuedJobs(string queue, int from, int perPage)
         {
             var queueApi = GetQueueApi(queue);
             var enqueuedJobIds = queueApi.GetEnqueuedJobIds(queue, from, perPage);
@@ -163,7 +201,7 @@ namespace Hangfire.Oracle.Core.Monitoring
             return UseConnection(connection => EnqueuedJobs(connection, enqueuedJobIds));
         }
 
-        public JobList<FetchedJobDto> FetchedJobs(string queue, int @from, int perPage)
+        public JobList<FetchedJobDto> FetchedJobs(string queue, int from, int perPage)
         {
             var queueApi = GetQueueApi(queue);
             var fetchedJobIds = queueApi.GetFetchedJobIds(queue, from, perPage);
@@ -171,7 +209,7 @@ namespace Hangfire.Oracle.Core.Monitoring
             return UseConnection(connection => FetchedJobs(connection, fetchedJobIds));
         }
 
-        public JobList<ProcessingJobDto> ProcessingJobs(int @from, int count)
+        public JobList<ProcessingJobDto> ProcessingJobs(int from, int count)
         {
             return UseConnection(connection => GetJobs(
                 connection,
@@ -185,12 +223,9 @@ namespace Hangfire.Oracle.Core.Monitoring
                 }));
         }
 
-        public JobList<ScheduledJobDto> ScheduledJobs(int @from, int count)
+        public JobList<ScheduledJobDto> ScheduledJobs(int from, int count)
         {
-            return UseConnection(connection => GetJobs(
-                connection,
-                from, count,
-                ScheduledState.StateName,
+            return UseConnection(connection => GetJobs(connection, from, count, ScheduledState.StateName,
                 (sqlJob, job, stateData) => new ScheduledJobDto
                 {
                     Job = job,
@@ -199,13 +234,9 @@ namespace Hangfire.Oracle.Core.Monitoring
                 }));
         }
 
-        public JobList<SucceededJobDto> SucceededJobs(int @from, int count)
+        public JobList<SucceededJobDto> SucceededJobs(int from, int count)
         {
-            return UseConnection(connection => GetJobs(
-                connection,
-                from,
-                count,
-                SucceededState.StateName,
+            return UseConnection(connection => GetJobs(connection, from, count, SucceededState.StateName,
                 (sqlJob, job, stateData) => new SucceededJobDto
                 {
                     Job = job,
@@ -217,13 +248,9 @@ namespace Hangfire.Oracle.Core.Monitoring
                 }));
         }
 
-        public JobList<FailedJobDto> FailedJobs(int @from, int count)
+        public JobList<FailedJobDto> FailedJobs(int from, int count)
         {
-            return UseConnection(connection => GetJobs(
-                connection,
-                from,
-                count,
-                FailedState.StateName,
+            return UseConnection(connection => GetJobs(connection, from, count, FailedState.StateName,
                 (sqlJob, job, stateData) => new FailedJobDto
                 {
                     Job = job,
@@ -235,13 +262,9 @@ namespace Hangfire.Oracle.Core.Monitoring
                 }));
         }
 
-        public JobList<DeletedJobDto> DeletedJobs(int @from, int count)
+        public JobList<DeletedJobDto> DeletedJobs(int from, int count)
         {
-            return UseConnection(connection => GetJobs(
-                connection,
-                from,
-                count,
-                DeletedState.StateName,
+            return UseConnection(connection => GetJobs(connection, from, count, DeletedState.StateName,
                 (sqlJob, job, stateData) => new DeletedJobDto
                 {
                     Job = job,
@@ -251,8 +274,7 @@ namespace Hangfire.Oracle.Core.Monitoring
 
         public long ScheduledCount()
         {
-            return UseConnection(connection =>
-                GetNumberOfJobsByStateName(connection, ScheduledState.StateName));
+            return UseConnection(connection => GetNumberOfJobsByStateName(connection, ScheduledState.StateName));
         }
 
         public long EnqueuedCount(string queue)
@@ -273,61 +295,53 @@ namespace Hangfire.Oracle.Core.Monitoring
 
         public long FailedCount()
         {
-            return UseConnection(connection =>
-                GetNumberOfJobsByStateName(connection, FailedState.StateName));
+            return UseConnection(connection => GetNumberOfJobsByStateName(connection, FailedState.StateName));
         }
 
         public long ProcessingCount()
         {
-            return UseConnection(connection =>
-                GetNumberOfJobsByStateName(connection, ProcessingState.StateName));
+            return UseConnection(connection => GetNumberOfJobsByStateName(connection, ProcessingState.StateName));
         }
 
         public long SucceededListCount()
         {
-            return UseConnection(connection =>
-                GetNumberOfJobsByStateName(connection, SucceededState.StateName));
+            return UseConnection(connection => GetNumberOfJobsByStateName(connection, SucceededState.StateName));
         }
 
         public long DeletedListCount()
         {
-            return UseConnection(connection =>
-                GetNumberOfJobsByStateName(connection, DeletedState.StateName));
+            return UseConnection(connection => GetNumberOfJobsByStateName(connection, DeletedState.StateName));
         }
 
         public IDictionary<DateTime, long> SucceededByDatesCount()
         {
-            return UseConnection(connection =>
-                GetTimelineStats(connection, "succeeded"));
+            return UseConnection(connection => GetTimelineStats(connection, "succeeded"));
         }
 
         public IDictionary<DateTime, long> FailedByDatesCount()
         {
-            return UseConnection(connection =>
-                GetTimelineStats(connection, "failed"));
+            return UseConnection(connection => GetTimelineStats(connection, "failed"));
         }
 
         public IDictionary<DateTime, long> HourlySucceededJobs()
         {
-            return UseConnection(connection =>
-                GetHourlyTimelineStats(connection, "succeeded"));
+            return UseConnection(connection => GetHourlyTimelineStats(connection, "succeeded"));
         }
 
         public IDictionary<DateTime, long> HourlyFailedJobs()
         {
-            return UseConnection(connection =>
-                GetHourlyTimelineStats(connection, "failed"));
+            return UseConnection(connection => GetHourlyTimelineStats(connection, "failed"));
         }
 
         private T UseConnection<T>(Func<IDbConnection, T> action)
         {
-            return _storage.UseTransaction(action, IsolationLevel.ReadUncommitted);
+            return _storage.UseTransaction(action, IsolationLevel.ReadCommitted);
         }
 
         private long GetNumberOfJobsByStateName(IDbConnection connection, string stateName)
         {
             var sqlQuery = _jobListLimit.HasValue
-                ? "SELECT COUNT(J.ID) FROM (SELECT ID FROM MISP.HF_JOB WHERE STATE_NAME = :STATE_NAME AND ROWNUM <= :LIMIT) AS J"
+                ? "SELECT COUNT(ID) FROM (SELECT ID FROM MISP.HF_JOB WHERE STATE_NAME = :STATE_NAME AND ROWNUM <= :LIMIT)"
                 : "SELECT COUNT(ID) FROM MISP.HF_JOB WHERE STATE_NAME = :STATE_NAME";
 
             var count = connection.QuerySingle<int>(
@@ -344,31 +358,41 @@ namespace Hangfire.Oracle.Core.Monitoring
             return monitoringApi;
         }
 
-        private JobList<TDto> GetJobs<TDto>(IDbConnection connection, int from, int count, string stateName,
+        private static JobList<TDto> GetJobs<TDto>(IDbConnection connection, int from, int count, string stateName,
             Func<SqlJob, Job, Dictionary<string, string>, TDto> selector)
         {
-            // TODO: QUERY fix
-            const string jobsSql = @"SELECT * FROM (
-  SELECT J.ID AS Id, J.STATE_ID AS StateId, J.STATE_NAME AS StateName, J.INVOCATION_DATA AS InvocationData, J.ARGUMENTS AS Arguments, J.CREATED_AT AS CreatedAt, J.EXPIRE_AT AS ExpireAt, S.REASON AS StateReason, S.DATA AS StateData , s.Reason as StateReason, s.Data as StateData, @rownum := @rownum + 1 AS rankvalue
-    FROM MISP.HF_JOB J
-    cross join (SELECT @rownum := 0) r
-  left join State s on j.StateId = s.Id
-  where j.StateName = :STATE_NAME
-  order by j.Id desc
-) as j where j.rankvalue between :START and :END ";
+            const string jobsSql = @"
+SELECT Id
+      ,StateId
+      ,StateName
+      ,InvocationData
+      ,Arguments
+      ,CreatedAt
+      ,ExpireAt
+      ,StateReason
+      ,StateData
+  FROM (SELECT J.ID                                             AS Id
+              ,J.STATE_ID                                       AS StateId
+              ,J.STATE_NAME                                     AS StateName
+              ,J.INVOCATION_DATA                                AS InvocationData
+              ,J.ARGUMENTS                                      AS Arguments
+              ,J.CREATED_AT                                     AS CreatedAt
+              ,J.EXPIRE_AT                                      AS ExpireAt
+              ,S.REASON                                         AS StateReason
+              ,S.DATA                                           AS StateData
+              ,RANK () OVER (ORDER BY J.ID DESC) AS RANK
+          FROM MISP.HF_JOB J LEFT JOIN MISP.HF_JOB_STATE S ON J.STATE_ID = S.ID
+         WHERE J.STATE_NAME = :STATE_NAME
+                                         )
+ WHERE RANK BETWEEN :S AND :E
+";
 
-            var jobs =
-                connection.Query<SqlJob>(
-                    jobsSql,
-                    new { STATE_NAME = stateName, START = @from + 1, END = @from + count })
-                    .ToList();
+            var jobs = connection.Query<SqlJob>(jobsSql, new { STATE_NAME = stateName, S = from + 1, E = from + count }).ToList();
 
             return DeserializeJobs(jobs, selector);
         }
 
-        private static JobList<TDto> DeserializeJobs<TDto>(
-            ICollection<SqlJob> jobs,
-            Func<SqlJob, Job, Dictionary<string, string>, TDto> selector)
+        private static JobList<TDto> DeserializeJobs<TDto>(ICollection<SqlJob> jobs, Func<SqlJob, Job, Dictionary<string, string>, TDto> selector)
         {
             var result = new List<KeyValuePair<string, TDto>>(jobs.Count);
 
@@ -381,8 +405,7 @@ namespace Hangfire.Oracle.Core.Monitoring
 
                 var dto = selector(job, DeserializeJob(job.InvocationData, job.Arguments), stateData);
 
-                result.Add(new KeyValuePair<string, TDto>(
-                    job.Id.ToString(), dto));
+                result.Add(new KeyValuePair<string, TDto>(job.Id.ToString(), dto));
             }
 
             return new JobList<TDto>(result);
@@ -403,9 +426,7 @@ namespace Hangfire.Oracle.Core.Monitoring
             }
         }
 
-        private Dictionary<DateTime, long> GetTimelineStats(
-            IDbConnection connection,
-            string type)
+        private static Dictionary<DateTime, long> GetTimelineStats(IDbConnection connection, string type)
         {
             var endDate = DateTime.UtcNow.Date;
             var dates = new List<DateTime>();
@@ -420,12 +441,11 @@ namespace Hangfire.Oracle.Core.Monitoring
             return GetTimelineStats(connection, keyMaps);
         }
 
-        private Dictionary<DateTime, long> GetTimelineStats(IDbConnection connection, IDictionary<string, DateTime> keyMaps)
+        private static Dictionary<DateTime, long> GetTimelineStats(IDbConnection connection, IDictionary<string, DateTime> keyMaps)
         {
-            var valuesMap = connection.Query(
-                "SELECT KEY AS Key, VALUE AS Count FROM MISP.HF_AGGREGATED_COUNTER WHERE KEY in :KEYS",
+            var valuesMap = connection.Query("SELECT KEY AS Key, VALUE AS Count FROM MISP.HF_AGGREGATED_COUNTER WHERE KEY in :KEYS",
                 new { KEYS = keyMaps.Keys })
-                .ToDictionary(x => (string)x.Key, x => (long)x.Count);
+                .ToDictionary(x => (string)x.KEY, x => (long)x.COUNT);
 
             foreach (var key in keyMaps.Keys)
             {
@@ -442,7 +462,7 @@ namespace Hangfire.Oracle.Core.Monitoring
             return result;
         }
 
-        private JobList<EnqueuedJobDto> EnqueuedJobs(IDbConnection connection, IEnumerable<int> jobIds)
+        private static JobList<EnqueuedJobDto> EnqueuedJobs(IDbConnection connection, IEnumerable<int> jobIds)
         {
             var enumerable = jobIds as int[] ?? jobIds.ToArray();
             var enqueuedJobsSql = @"
@@ -461,13 +481,10 @@ namespace Hangfire.Oracle.Core.Monitoring
      ON S.ID = J.STATE_ID
 ";
             }
-            var jobs = connection.Query<SqlJob>(
-                enqueuedJobsSql,
-                new { jobIds = enumerable })
-                .ToList();
 
-            return DeserializeJobs(
-                jobs,
+            var jobs = connection.Query<SqlJob>(enqueuedJobsSql, new { JOB_IDS = enumerable }).ToList();
+
+            return DeserializeJobs(jobs,
                 (sqlJob, job, stateData) => new EnqueuedJobDto
                 {
                     Job = job,
@@ -478,7 +495,7 @@ namespace Hangfire.Oracle.Core.Monitoring
                 });
         }
 
-        private JobList<FetchedJobDto> FetchedJobs(IDbConnection connection, IEnumerable<int> jobIds)
+        private static JobList<FetchedJobDto> FetchedJobs(IDbConnection connection, IEnumerable<int> jobIds)
         {
             const string fetchedJobsSql = @"
  SELECT J.ID AS Id, J.STATE_ID AS StateId, J.STATE_NAME AS StateName, J.INVOCATION_DATA AS InvocationData, J.ARGUMENTS AS Arguments, J.CREATED_AT AS CreatedAt, J.EXPIRE_AT AS ExpireAt, S.REASON AS StateReason, S.DATA AS StateData 
@@ -502,7 +519,7 @@ namespace Hangfire.Oracle.Core.Monitoring
             return new JobList<FetchedJobDto>(result);
         }
 
-        private Dictionary<DateTime, long> GetHourlyTimelineStats(IDbConnection connection, string type)
+        private static Dictionary<DateTime, long> GetHourlyTimelineStats(IDbConnection connection, string type)
         {
             var endDate = DateTime.UtcNow;
             var dates = new List<DateTime>();
