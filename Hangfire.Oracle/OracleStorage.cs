@@ -59,16 +59,6 @@ namespace Hangfire.Oracle.Core
             InitializeQueueProviders();
         }
 
-        private string ApplyAllowUserVariablesProperty(string connectionString)
-        {
-            if (connectionString.ToLower().Contains("allow user variables"))
-            {
-                return connectionString;
-            }
-
-            return connectionString + ";Allow User Variables=True;";
-        }
-
         internal OracleStorage(IDbConnection existingConnection)
         {
             _existingConnection = existingConnection ?? throw new ArgumentNullException(nameof(existingConnection));
@@ -121,17 +111,8 @@ namespace Hangfire.Oracle.Core
                     builder.Append("@");
                 }
 
-                foreach (var alias in new[] { "Database", "Initial Catalog" })
-                {
-                    if (parts.ContainsKey(alias))
-                    {
-                        builder.Append(parts[alias]);
-                        break;
-                    }
-                }
-
                 return builder.Length != 0
-                    ? $"Server: {builder}"
+                    ? $"Hangfire.Oracle.Core: {builder}"
                     : canNotParseMessage;
             }
             catch (Exception ex)
