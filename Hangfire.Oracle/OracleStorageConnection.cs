@@ -51,38 +51,39 @@ namespace Hangfire.Oracle.Core
 
             return _storage.UseConnection(connection =>
             {
-                var jobId = connection.Query<int>(
-                    "insert into Job (InvocationData, Arguments, CreatedAt, ExpireAt) " +
-                    "values (@invocationData, @arguments, @createdAt, @expireAt); " +
-                    "select last_insert_id();",
+                var jobId = connection.GetNextId();
+                connection.Execute(
+                    @" 
+ INSERT INTO MISP.HF_JOB (ID, INVOCATION_DATA, ARGUMENTS, CREATED_AT, EXPIRE_AT) 
+      VALUES (:ID, :INVOCATION_DATA, :ARGUMENTS, :CREATED_AT, :EXPIRE_AT)
+",
                     new
                     {
-                        invocationData = JobHelper.ToJson(invocationData),
-                        arguments = invocationData.Arguments,
-                        createdAt = createdAt,
-                        expireAt = createdAt.Add(expireIn)
-                    }).Single().ToString();
+                        ID = jobId,
+                        INVOCATION_DATA = JobHelper.ToJson(invocationData),
+                        ARGUMENTS = invocationData.Arguments,
+                        CREATED_AT = createdAt,
+                        EXPIRE_AT = createdAt.Add(expireIn)
+                    });
 
                 if (parameters.Count > 0)
                 {
                     var parameterArray = new object[parameters.Count];
-                    int parameterIndex = 0;
+                    var parameterIndex = 0;
                     foreach (var parameter in parameters)
                     {
                         parameterArray[parameterIndex++] = new
                         {
-                            jobId = jobId,
-                            name = parameter.Key,
-                            value = parameter.Value
+                            JOB_ID = jobId,
+                            NAME = parameter.Key,
+                            VALUE = parameter.Value
                         };
                     }
 
-                    connection.Execute(
-                        "insert into JobParameter (JobId, Name, Value) values (@jobId, @name, @value)", 
-                        parameterArray);
+                    connection.Execute(@"INSERT INTO MISP.HF_JOB_PARAMETER (ID, NAME, VALUE, JOB_ID) VALUES (MISP.HF_SEQUENCE.NEXTVAL, :NAME, :VALUE, :JOB_ID)", parameterArray);
                 }
 
-                return jobId;
+                return jobId.ToString();
             });
         }
 
@@ -123,10 +124,17 @@ namespace Hangfire.Oracle.Core
             _storage.UseConnection(connection =>
             {
                 connection.Execute(
-                    "insert into JobParameter (JobId, Name, Value) " +
-                    "value (@jobId, @name, @value) " +
-                    "on duplicate key update Value = @value ",
-                    new { jobId = id, name, value });
+                    @" 
+ MERGE INTO MISP.HF_JOB_PARAMETER JP
+      USING (SELECT * FROM MISP.HF_JOB_PARAMETER) SRC
+         ON (JP.ID = SRC.ID)
+ WHEN MATCHED THEN
+      UPDATE SET VALUE = :VALUE
+ WHEN NOT MATCHED THEN
+      INSERT (ID, JOB_ID, NAME, VALUE)
+      VALUES (MISP.HF_SEQUENCE.NEXTVAL, :JOB_ID, :NAME, :VALUE)
+",
+                    new { JOB_ID = id, NAME = name, VALUE = value });
             });
         }
 
@@ -142,12 +150,12 @@ namespace Hangfire.Oracle.Core
                 throw new ArgumentNullException(nameof(name));
             }
 
-            return _storage.UseConnection(connection => 
-                connection.Query<string>(
-                    "select Value " +
-                    "from JobParameter " +
-                    "where JobId = @id and Name = @name",
-                    new {id = id, name = name}).SingleOrDefault());
+            return _storage.UseConnection(connection =>
+                connection.QuerySingleOrDefault<string>(
+                    "SELECT VALUE as Value " +
+                    "  FROM MISP.HF_JOB_PARAMETER " +
+                    " WHERE JOB_ID = :ID AND NAME = :NAME",
+                    new { ID = id, NAME = name }));
         }
 
         public override JobData GetJobData(string jobId)
@@ -159,14 +167,11 @@ namespace Hangfire.Oracle.Core
 
             return _storage.UseConnection(connection =>
             {
-                var jobData = 
-                    connection
-                        .Query<SqlJob>(
-                            "select InvocationData, StateName, Arguments, CreatedAt " +
-                            "from Job " +
-                            "where Id = @id", 
-                            new {id = jobId})
-                        .SingleOrDefault();
+                var jobData = connection.QuerySingleOrDefault<SqlJob>(
+                            "SELECT INVOCATION_DATA AS InvocationData, STATE_NAME AS StateName, ARGUMENTS AS Arguments, CREATED_AT AS CreatedAt " +
+                            "  FROM MISP.HF_JOB " +
+                            " WHERE ID = :ID",
+                            new { ID = jobId });
 
                 if (jobData == null)
                 {
@@ -207,12 +212,14 @@ namespace Hangfire.Oracle.Core
 
             return _storage.UseConnection(connection =>
             {
-                var sqlState = 
-                    connection.Query<SqlState>(
-                        "select s.Name, s.Reason, s.Data " +
-                        "from State s inner join Job j on j.StateId = s.Id " +
-                        "where j.Id = @jobId", 
-                        new { jobId = jobId }).SingleOrDefault();
+                var sqlState = connection.QuerySingleOrDefault<SqlState>(
+                        " SELECT S.NAME AS Name, S.REASON AS Reason, S.DATA AS Data " +
+                        "   FROM MISP.HF_JOB_STATE S" +
+                        "  INNER JOIN MISP.HF_JOB J" +
+                        "    ON J.STATE_ID = S.ID " +
+                        " WHERE J.ID = :JOB_ID",
+                        new { JOB_ID = jobId });
+
                 if (sqlState == null)
                 {
                     return null;
@@ -246,44 +253,59 @@ namespace Hangfire.Oracle.Core
             _storage.UseConnection(connection =>
             {
                 connection.Execute(
-                    "INSERT INTO Server (Id, Data, LastHeartbeat) " +
-                    "VALUE (@id, @data, @heartbeat) " +
-                    "ON DUPLICATE KEY UPDATE Data = @data, LastHeartbeat = @heartbeat",
+                    @"
+ MERGE INTO MISP.HF_SERVER S
+      USING (SELECT * FROM MISP.HF_SERVER) SRC
+         ON (S.ID = SRC.ID)
+ WHEN MATCHED THEN
+      UPDATE SET LAST_HEART_BEAT = :LAST_HEART_BEAT
+ WHEN NOT MATCHED THEN
+      INSERT (ID, DATA, LAST_HEART_BEAT)
+      VALUES (:ID, :DATA, :LAST_HEART_BEAT)
+",
                     new
                     {
-                        id = serverId,
-                        data = JobHelper.ToJson(new ServerData
+                        ID = serverId,
+                        DATA = JobHelper.ToJson(new ServerData
                         {
                             WorkerCount = context.WorkerCount,
                             Queues = context.Queues,
                             StartedAt = DateTime.UtcNow,
                         }),
-                        heartbeat = DateTime.UtcNow
+                        LAST_HEART_BEAT = DateTime.UtcNow
                     });
             });
         }
 
         public override void RemoveServer(string serverId)
         {
-            if (serverId == null) throw new ArgumentNullException(nameof(serverId));
+            if (serverId == null)
+            {
+                throw new ArgumentNullException(nameof(serverId));
+            }
 
             _storage.UseConnection(connection =>
             {
                 connection.Execute(
-                    "delete from Server where Id = @id",
-                    new { id = serverId });
+                    "DELETE FROM MISP.HF_SERVER where ID = :ID",
+                    new { ID = serverId });
             });
         }
 
         public override void Heartbeat(string serverId)
         {
-            if (serverId == null) throw new ArgumentNullException(nameof(serverId));
+            if (serverId == null)
+            {
+                throw new ArgumentNullException(nameof(serverId));
+            }
 
             _storage.UseConnection(connection =>
             {
                 connection.Execute(
-                    "update Server set LastHeartbeat = @now where Id = @id",
-                    new { now = DateTime.UtcNow, id = serverId });
+                    " UPDATE MISP.HF_SERVER" +
+                    "    SET LAST_HEART_BEAT = :NOW" +
+                    "  WHERE ID = :ID",
+                    new { NOW = DateTime.UtcNow, ID = serverId });
             });
         }
 
@@ -297,8 +319,9 @@ namespace Hangfire.Oracle.Core
             return
                 _storage.UseConnection(connection =>
                     connection.Execute(
-                        "delete from Server where LastHeartbeat < @timeOutAt",
-                        new {timeOutAt = DateTime.UtcNow.Add(timeOut.Negate())}));
+                        " DELETE FROM MISP.HF_SERVER" +
+                        "  WHERE LAST_HEART_BEAT < :TIME_OUT_AT",
+                        new { TIME_OUT_AT = DateTime.UtcNow.Add(timeOut.Negate()) }));
         }
 
         public override long GetSetCount(string key)
@@ -307,15 +330,21 @@ namespace Hangfire.Oracle.Core
 
             return
                 _storage.UseConnection(connection =>
-                    connection.Query<int>(
-                        "select count(`Key`) from `Set` where `Key` = @key",
-                        new {key = key}).First());
+                    connection.QueryFirst<int>(
+                        "SELECT COUNT(KEY) " +
+                        "  FROM MISP.HF_SET" +
+                        " WHERE KEY = :KEY",
+                        new { KEY = key }));
         }
 
         public override List<string> GetRangeFromSet(string key, int startingFrom, int endingAt)
         {
-            if (key == null) throw new ArgumentNullException(nameof(key));
-            
+            if (key == null)
+            {
+                throw new ArgumentNullException(nameof(key));
+            }
+
+            // TODO: QUERY Fix
             return _storage.UseConnection(connection =>
                 connection
                     .Query<string>(@"
@@ -328,20 +357,25 @@ from (
         order by Id
      ) ranked
 where ranked.rankvalue between @startingFrom and @endingAt",
-                        new {key = key, startingFrom = startingFrom + 1, endingAt = endingAt + 1})
+                        new { key = key, startingFrom = startingFrom + 1, endingAt = endingAt + 1 })
                     .ToList());
         }
 
         public override HashSet<string> GetAllItemsFromSet(string key)
         {
-            if (key == null) throw new ArgumentNullException(nameof(key));
+            if (key == null)
+            {
+                throw new ArgumentNullException(nameof(key));
+            }
 
             return
                 _storage.UseConnection(connection =>
                 {
                     var result = connection.Query<string>(
-                        "select Value from `Set` where `Key` = @key",
-                        new {key});
+                        "SELECT VALUE AS Value" +
+                        "  FROM MISP.HF_SET" +
+                        " WHERE KEY = :KEY",
+                        new { KEY = key });
 
                     return new HashSet<string>(result);
                 });
@@ -349,49 +383,62 @@ where ranked.rankvalue between @startingFrom and @endingAt",
 
         public override string GetFirstByLowestScoreFromSet(string key, double fromScore, double toScore)
         {
-            if (key == null) throw new ArgumentNullException(nameof(key));
-            if (toScore < fromScore) 
+            if (key == null)
+            {
+                throw new ArgumentNullException(nameof(key));
+            }
+
+            if (toScore < fromScore)
+            {
                 throw new ArgumentException("The `toScore` value must be higher or equal to the `fromScore` value.");
+            }
 
             return
                 _storage.UseConnection(connection =>
-                    connection.Query<string>(
-                        "select Value " +
-                        "from `Set` " +
-                        "where `Key` = @key and Score between @from and @to " +
-                        "order by Score " +
-                        "limit 1",
-                        new {key, from = fromScore, to = toScore})
-                        .SingleOrDefault());
+                    connection.QuerySingleOrDefault<string>(
+                        " SELECT * FROM (" +
+                        " SELECT VALUE AS Value " +
+                        "   FROM MISP.HF_SET " +
+                        "  WHERE KEY = :KEY " +
+                        "    AND SCORE BETWEEN :FROM AND :TO " +
+                        " ORDER BY SCORE) " +
+                        " WHERE ROWNUM = 1",
+                        new { KEY = key, FROM = fromScore, TO = toScore }));
         }
 
         public override long GetCounter(string key)
         {
-            if (key == null) throw new ArgumentNullException(nameof(key));
+            if (key == null)
+            {
+                throw new ArgumentNullException(nameof(key));
+            }
 
-            string query = @"
-select sum(s.`Value`) from (select sum(`Value`) as `Value` from Counter
-where `Key` = @key
-union all
-select `Value` from AggregatedCounter
-where `Key` = @key) as s";
+            const string query = @"
+ SELECT SUM(S.Value)
+   FROM (SELECT SUM(VALUE) AS Value
+   FROM MISP.HF_COUNTER
+  WHERE KEY = :KEY
+ UNION ALL
+ SELECT VALUE as Value
+  FROM MISP.HF_AGGREGATED_COUNTER
+ WHERE KEY = :KEY) AS S";
 
-            return 
+            return
                 _storage
                     .UseConnection(connection =>
-                        connection.Query<long?>(query, new { key = key }).Single() ?? 0);
+                        connection.QuerySingle<long?>(query, new { KEY = key }) ?? 0);
         }
 
         public override long GetHashCount(string key)
         {
             if (key == null) throw new ArgumentNullException(nameof(key));
 
-            return 
+            return
                 _storage
-                    .UseConnection(connection => 
-                        connection.Query<long>(
-                            "select count(Id) from Hash where `Key` = @key", 
-                            new { key = key }).Single());
+                    .UseConnection(connection =>
+                        connection.QuerySingle<long>(
+                            "SELECT COUNT(ID) FROM MISP.HF_HASH WHERE KEY = :KEY",
+                            new { KEY = key }));
         }
 
         public override TimeSpan GetHashTtl(string key)
@@ -400,11 +447,15 @@ where `Key` = @key) as s";
 
             return _storage.UseConnection(connection =>
             {
-                var result = 
-                    connection.Query<DateTime?>(
-                        "select min(ExpireAt) from Hash where `Key` = @key", 
-                        new { key = key }).Single();
-                if (!result.HasValue) return TimeSpan.FromSeconds(-1);
+                var result =
+                    connection.QuerySingle<DateTime?>(
+                        "SELECT MIN(EXPIRE_AT) FROM MISP.HF_HASH WHERE KEY = :KEY",
+                        new { KEY = key });
+
+                if (!result.HasValue)
+                {
+                    return TimeSpan.FromSeconds(-1);
+                }
 
                 return result.Value - DateTime.UtcNow;
             });
@@ -414,12 +465,12 @@ where `Key` = @key) as s";
         {
             if (key == null) throw new ArgumentNullException(nameof(key));
 
-            return 
+            return
                 _storage
-                    .UseConnection(connection => 
-                        connection.Query<long>(
-                            "select count(Id) from List where `Key` = @key", 
-                            new { key = key }).Single());
+                    .UseConnection(connection =>
+                        connection.QuerySingle<long>(
+                            "SELECT COUNT(ID) FROM MISP.HF_LIST WHERE KEY = :KEY",
+                            new { KEY = key }));
         }
 
         public override TimeSpan GetListTtl(string key)
@@ -428,11 +479,14 @@ where `Key` = @key) as s";
 
             return _storage.UseConnection(connection =>
             {
-                var result = 
-                    connection.Query<DateTime?>(
-                        "select min(ExpireAt) from List where `Key` = @key", 
-                        new { key = key }).Single();
-                if (!result.HasValue) return TimeSpan.FromSeconds(-1);
+                var result = connection.QuerySingle<DateTime?>(
+                        "SELECT MIN(EXPIRE_AT) FROM MISP.HF_LIST WHERE KEY = :KEY",
+                        new { KEY = key });
+
+                if (!result.HasValue)
+                {
+                    return TimeSpan.FromSeconds(-1);
+                }
 
                 return result.Value - DateTime.UtcNow;
             });
@@ -443,19 +497,23 @@ where `Key` = @key) as s";
             if (key == null) throw new ArgumentNullException(nameof(key));
             if (name == null) throw new ArgumentNullException(nameof(name));
 
-            return 
+            return
                 _storage
-                    .UseConnection(connection => 
-                        connection.Query<string>(
-                            "select `Value` from Hash where `Key` = @key and `Field` = @field", 
-                            new { key = key, field = name }).SingleOrDefault());
+                    .UseConnection(connection =>
+                        connection.QuerySingleOrDefault<string>(
+                            "SELECT VALUE AS Value FROM MISP.HF_HASH WHERE KEY = :KEY and FIELD = :FIELD",
+                            new { KEY = key, FIELD = name }));
         }
 
         public override List<string> GetRangeFromList(string key, int startingFrom, int endingAt)
         {
-            if (key == null) throw new ArgumentNullException(nameof(key));
+            if (key == null)
+            {
+                throw new ArgumentNullException(nameof(key));
+            }
 
-            string query = @"
+            // TODO: QUERY fix
+            const string query = @"
 select `Value` 
 from (
         select `Value`, @rownum := @rownum + 1 AS rankvalue
@@ -470,7 +528,7 @@ where ranked.rankvalue between @startingFrom and @endingAt";
                     .UseConnection(connection =>
                         connection.Query<string>(
                             query,
-                            new {key = key, startingFrom = startingFrom + 1, endingAt = endingAt + 1})
+                            new { key = key, startingFrom = startingFrom + 1, endingAt = endingAt + 1 })
                             .ToList());
         }
 
@@ -478,12 +536,13 @@ where ranked.rankvalue between @startingFrom and @endingAt";
         {
             if (key == null) throw new ArgumentNullException(nameof(key));
 
-            string query = @"
-select `Value` from List
-where `Key` = @key
-order by Id desc";
+            const string query = @"
+ SELECT VALUE AS Value
+   FROM MISP.HF_LIST
+  WHERE KEY = :KEY
+ ORDER BY ID DESC";
 
-            return _storage.UseConnection(connection => connection.Query<string>(query, new { key = key }).ToList());
+            return _storage.UseConnection(connection => connection.Query<string>(query, new { KEY = key }).ToList());
         }
 
         public override TimeSpan GetSetTtl(string key)
@@ -492,12 +551,16 @@ order by Id desc";
 
             return _storage.UseConnection(connection =>
             {
-                var result = 
+                var result =
                     connection
-                        .Query<DateTime?>(
-                            "select min(ExpireAt) from `Set` where `Key` = @key", 
-                            new { key = key }).Single();
-                if (!result.HasValue) return TimeSpan.FromSeconds(-1);
+                        .QuerySingle<DateTime?>(
+                            "SELECT MIN(EXPIRE_AT) FROM MISP.HF_SET WHERE KEY = :KEY",
+                            new { KEY = key });
+
+                if (!result.HasValue)
+                {
+                    return TimeSpan.FromSeconds(-1);
+                }
 
                 return result.Value - DateTime.UtcNow;
             });
@@ -505,31 +568,48 @@ order by Id desc";
 
         public override void SetRangeInHash(string key, IEnumerable<KeyValuePair<string, string>> keyValuePairs)
         {
-            if (key == null) throw new ArgumentNullException(nameof(key));
-            if (keyValuePairs == null) throw new ArgumentNullException(nameof(keyValuePairs));
+            if (key == null)
+            {
+                throw new ArgumentNullException(nameof(key));
+            }
+
+            if (keyValuePairs == null)
+            {
+                throw new ArgumentNullException(nameof(keyValuePairs));
+            }
 
             _storage.UseTransaction(connection =>
             {
                 foreach (var keyValuePair in keyValuePairs)
                 {
                     connection.Execute(
-                        "insert into Hash (`Key`, Field, Value) " +
-                        "value (@key, @field, @value) " +
-                        "on duplicate key update Value = @value", 
-                        new { key = key, field = keyValuePair.Key, value = keyValuePair.Value });
+                        @"
+ MERGE INTO MISP.HF_HASH H
+      USING (SELECT * FROM MISP.HF_HASH) SRC
+         ON (H.KEY = SRC.KEY AND H.FIELD = SRC.FIELD)
+ WHEN MATCHED THEN
+     UPDATE SET VALUE = :VALUE
+ WHEN NOT MATCHED THEN
+     INSERT (ID, KEY, FIELD, VALUE)
+     VALUES (MISP.HF_SEQUENCE.NEXTVAL, :KEY, :FIELD, :VALUE)
+",
+                        new { KEY = key, FIELD = keyValuePair.Key, VALUE = keyValuePair.Value });
                 }
             });
         }
 
         public override Dictionary<string, string> GetAllEntriesFromHash(string key)
         {
-            if (key == null) throw new ArgumentNullException(nameof(key));
+            if (key == null)
+            {
+                throw new ArgumentNullException(nameof(key));
+            }
 
             return _storage.UseConnection(connection =>
             {
                 var result = connection.Query<SqlHash>(
-                    "select Field, Value from Hash where `Key` = @key",
-                    new {key})
+                    "SELECT FIELD AS Field, VALUE AS Value FROM MISP.HF_HASH WHERE KEY = :KEY",
+                    new { KEY = key })
                     .ToDictionary(x => x.Field, x => x.Value);
 
                 return result.Count != 0 ? result : null;

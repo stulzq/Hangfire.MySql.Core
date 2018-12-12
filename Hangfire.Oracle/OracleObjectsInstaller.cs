@@ -33,7 +33,12 @@ namespace Hangfire.Oracle.Core
 
         private static bool TablesExists(IDbConnection connection)
         {
-            return connection.ExecuteScalar<string>("SHOW TABLES LIKE 'Job';") != null;
+            return connection.ExecuteScalar<string>(@"
+   SELECT TABLE_NAME
+     FROM all_tables
+    WHERE OWNER = 'MISP' AND TABLE_NAME LIKE 'HF_%'
+ ORDER BY OWNER, TABLE_NAME
+") != null;
         }
 
         private static string GetStringResource(string resourceName)

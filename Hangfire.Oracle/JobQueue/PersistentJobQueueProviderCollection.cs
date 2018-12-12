@@ -10,10 +10,8 @@ namespace Hangfire.Oracle.Core.JobQueue
     {
         private static readonly ILog Logger = LogProvider.GetLogger(typeof(PersistentJobQueueProviderCollection));
 
-        private readonly List<IPersistentJobQueueProvider> _providers
-            = new List<IPersistentJobQueueProvider>();
-        private readonly Dictionary<string, IPersistentJobQueueProvider> _providersByQueue
-            = new Dictionary<string, IPersistentJobQueueProvider>(StringComparer.OrdinalIgnoreCase);
+        private readonly List<IPersistentJobQueueProvider> _providers = new List<IPersistentJobQueueProvider>();
+        private readonly Dictionary<string, IPersistentJobQueueProvider> _providersByQueue = new Dictionary<string, IPersistentJobQueueProvider>(StringComparer.OrdinalIgnoreCase);
 
         private readonly IPersistentJobQueueProvider _defaultProvider;
 

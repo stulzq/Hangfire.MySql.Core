@@ -21,11 +21,11 @@ namespace Hangfire.Oracle.Core
 
         private static readonly string[] ProcessedTables =
         {
-            "AggregatedCounter",
-            "Job",
-            "List",
-            "Set",
-            "Hash",
+            "HF_AGGREGATED_COUNTER",
+            "HF_JOB",
+            "HF_LIST",
+            "HF_SET",
+            "HF_HASH",
         };
 
         private readonly OracleStorage _storage;
@@ -48,7 +48,7 @@ namespace Hangfire.Oracle.Core
             {
                 Logger.DebugFormat("Removing outdated records from table '{0}'...", table);
 
-                int removedCount = 0;
+                var removedCount = 0;
 
                 do
                 {
@@ -56,21 +56,21 @@ namespace Hangfire.Oracle.Core
                     {
                         try
                         {
-                            Logger.DebugFormat("delete from `{0}` where ExpireAt < @now limit @count;", table);
+                            Logger.DebugFormat("DELETE FROM `{0}` WHERE EXPIRE_AT < :NOW WHERE ROWNUM < :COUNT", table);
 
                             using (
                                 new OracleDistributedLock(
-                                    connection, 
-                                    DistributedLockKey, 
+                                    connection,
+                                    DistributedLockKey,
                                     DefaultLockTimeout,
                                     cancellationToken).Acquire())
                             {
                                 removedCount = connection.Execute(
-                                    $"delete from `{table}` where ExpireAt < @now limit @count;",
-                                    new {now = DateTime.UtcNow, count = NumberOfRecordsInSinglePass});
+                                    $"DELETE FROM MISP.{table} WHERE EXPIRE_AT < :NOW WHERE ROWNUM < :COUNT",
+                                    new { NOW = DateTime.UtcNow, COUNT = NumberOfRecordsInSinglePass });
                             }
 
-                            Logger.DebugFormat("removed records count={0}",removedCount);
+                            Logger.DebugFormat("removed records count={0}", removedCount);
                         }
                         catch (OracleException ex)
                         {

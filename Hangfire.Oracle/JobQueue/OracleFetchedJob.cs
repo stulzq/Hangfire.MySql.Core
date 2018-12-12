@@ -20,18 +20,18 @@ namespace Hangfire.Oracle.Core.JobQueue
         private bool _requeued;
         private bool _disposed;
 
-        public OracleFetchedJob(
-            OracleStorage storage, 
-            IDbConnection connection,
-            FetchedJob fetchedJob)
+        public OracleFetchedJob(OracleStorage storage, IDbConnection connection, FetchedJob fetchedJob)
         {
-	        if (fetchedJob == null) throw new ArgumentNullException(nameof(fetchedJob));
+            if (fetchedJob == null)
+            {
+                throw new ArgumentNullException(nameof(fetchedJob));
+            }
 
             _storage = storage ?? throw new ArgumentNullException(nameof(storage));
             _connection = connection ?? throw new ArgumentNullException(nameof(connection));
             _id = fetchedJob.Id;
             JobId = fetchedJob.JobId.ToString(CultureInfo.InvariantCulture);
-            Queue = fetchedJob.Queue; 
+            Queue = fetchedJob.Queue;
         }
 
         public void Dispose()
@@ -55,11 +55,11 @@ namespace Hangfire.Oracle.Core.JobQueue
 
             //todo: unit test
             _connection.Execute(
-                "delete from JobQueue " +
-                "where Id = @id",
+                "DELETE FROM MISP.HF_JOB_QUEUE " +
+                " WHERE ID = :ID",
                 new
                 {
-                    id = _id
+                    ID = _id
                 });
 
             _removedFromQueue = true;
@@ -71,12 +71,14 @@ namespace Hangfire.Oracle.Core.JobQueue
 
             //todo: unit test
             _connection.Execute(
-                "update JobQueue set FetchedAt = null " +
-                "where Id = @id",
+                "UPDATE MISP.HF_JOB_QUEUE " +
+                "   SET FETCHED_AT = null " +
+                " WHERE ID = :ID",
                 new
                 {
-                    id = _id
+                    ID = _id
                 });
+
             _requeued = true;
         }
 

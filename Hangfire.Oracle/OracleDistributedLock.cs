@@ -52,18 +52,19 @@ namespace Hangfire.Oracle.Core
             return
                 _connection
                     .Execute(
-                        "INSERT INTO DistributedLock (Resource, CreatedAt) " +
-                        "  SELECT @resource, @now " +
-                        "  FROM dual " +
-                        "  WHERE NOT EXISTS ( " +
-                        "  		SELECT * FROM DistributedLock " +
-                        "     	WHERE Resource = @resource " +
-                        "       AND CreatedAt > @expired)", 
+                        " INSERT INTO MISP.HF_DISTRIBUTED_LOCK (RESOURCE, CREATED_AT) " +
+                        "   (SELECT :RESOURCE, :NOW " +
+                        "    FROM dual " +
+                        "    WHERE NOT EXISTS ( " +
+                        "         SELECT RESOURCE, CREATED_AT " +
+                        "           FROM MISP.HF_DISTRIBUTED_LOCK " +
+                        "         WHERE RESOURCE = :RESOURCE " +
+                        "         AND CREATED_AT > :EXPIRED))", 
                         new
                         {
-                            resource,
-                            now = DateTime.UtcNow, 
-                            expired = DateTime.UtcNow.Add(timeout.Negate())
+                            RESOURCE = resource,
+                            NOW = DateTime.UtcNow,
+                            EXPIRED = DateTime.UtcNow.Add(timeout.Negate())
                         });
         }
 
@@ -113,11 +114,11 @@ namespace Hangfire.Oracle.Core
 
             _connection
                 .Execute(
-                    "DELETE FROM DistributedLock  " +
-                    "WHERE Resource = @resource",
+                    " DELETE FROM MISP.HF_DISTRIBUTED_LOCK " +
+                    "  WHERE RESOURCE = :RESOURCE",
                     new
                     {
-                        resource = _resource
+                        RESOURCE = _resource
                     });
         }
 

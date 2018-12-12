@@ -4,6 +4,7 @@ using System.Threading;
 using Dapper;
 
 using Hangfire.Logging;
+using Hangfire.Oracle.Core.Entities;
 using Hangfire.Server;
 
 namespace Hangfire.Oracle.Core
@@ -34,9 +35,7 @@ namespace Hangfire.Oracle.Core
             {
                 _storage.UseConnection(connection =>
                 {
-                    removedCount = connection.Execute(
-                        GetAggregationQuery(),
-                        new { now = DateTime.UtcNow, count = NumberOfRecordsInSinglePass });
+                    removedCount = connection.Execute(GetAggregationQuery(), new { NOW = DateTime.UtcNow, COUNT = NumberOfRecordsInSinglePass });
                 });
 
                 if (removedCount >= NumberOfRecordsInSinglePass)
@@ -57,24 +56,24 @@ namespace Hangfire.Oracle.Core
         private static string GetAggregationQuery()
         {
             return @"
-SET TRANSACTION ISOLATION LEVEL READ COMMITTED;
-START TRANSACTION;
-
-INSERT INTO AggregatedCounter (`Key`, Value, ExpireAt)
-    SELECT `Key`, SUM(Value) as Value, MAX(ExpireAt) AS ExpireAt 
-    FROM (
-            SELECT `Key`, Value, ExpireAt
-            FROM Counter
-            LIMIT @count) tmp
-	GROUP BY `Key`
-        ON DUPLICATE KEY UPDATE 
-            Value = Value + VALUES(Value),
-            ExpireAt = GREATEST(ExpireAt,VALUES(ExpireAt));
-
-DELETE FROM `Counter`
-LIMIT @count;
-
-COMMIT;";
+ MERGE INTO MISP.HF_AGGREGATED_COUNTER AC
+      USING (SELECT KEY, SUM(VALUE) AS VALUE, MAX(EXPIRE_AT) AS EXPIRE_AT 
+     FROM (
+             SELECT KEY, VALUE, EXPIRE_AT
+               FROM MISP.HF_COUNTER
+              WHERE ROWNUM < :COUNT) tmp
+ 	GROUP BY KEY) C
+         ON AC.KEY = C.KEY
+ WHEN MATCHED THEN
+      UPDATE SET AC.VALUE = AC.VALUE || C.VALUE,
+                 AC.EXPIRE_AT = GREATEST(AC.EXPIRE_AT, C.EXPIRE_AT)
+ WHEN NOT MATCHED THEN
+      INSERT (ID, KEY, VALUE, EXPIRE_AT)
+      VALUES (MISP.HF_SEQUENCE.NEXTVAL, C.KEY, C.VALUE, C.EXPIRE_AT);
+ 
+ DELETE FROM MISP.HF_COUNTER
+  WHERE ROWNUM < :COUNT;
+";
         }
     }
 }

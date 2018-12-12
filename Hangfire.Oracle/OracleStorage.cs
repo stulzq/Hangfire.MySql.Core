@@ -44,6 +44,7 @@ namespace Hangfire.Oracle.Core
 
             if (IsConnectionString(connectionString))
             {
+                // TODO: Remove
                 if (!connectionString.ToLower().Contains("ignorecommandtransaction"))
                 {
                     if (connectionString.Last() != ';')
@@ -94,9 +95,7 @@ namespace Hangfire.Oracle.Core
 
         private void InitializeQueueProviders()
         {
-            QueueProviders =
-                new PersistentJobQueueProviderCollection(
-                    new OracleJobQueueProvider(this, _options));
+            QueueProviders = new PersistentJobQueueProviderCollection(new OracleJobQueueProvider(this, _options));
         }
 
         public override IEnumerable<IServerComponent> GetComponents()
@@ -168,7 +167,7 @@ namespace Hangfire.Oracle.Core
             return new OracleStorageConnection(this);
         }
 
-        private bool IsConnectionString(string nameOrConnectionString)
+        private static bool IsConnectionString(string nameOrConnectionString)
         {
             return nameOrConnectionString.Contains(";");
         }

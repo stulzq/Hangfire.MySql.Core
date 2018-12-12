@@ -6,6 +6,7 @@ using System.Threading;
 using Dapper;
 
 using Hangfire.Logging;
+using Hangfire.Oracle.Core.Entities;
 using Hangfire.Storage;
 
 using Oracle.ManagedDataAccess.Client;
@@ -43,11 +44,12 @@ namespace Hangfire.Oracle.Core.JobQueue
                     {
                         var token = Guid.NewGuid().ToString();
 
+                        // TODO: QUERY fix interval
                         var nUpdated = connection.Execute(
-                            "UPDATE JobQueue " +
-                            "   SET FetchedAt = SYS_EXTRACT_UTC(SYSTIMESTAMP), FetchToken = :FETCH_TOKEN " +
-                            " WHERE (FetchedAt IS NULL OR FetchedAt < SYS_EXTRACT_UTC(SYSTIMESTAMP) + INTERVAL :TIMEOUT SECOND) " +
-                            "   AND Queue IN :QUEUES " +
+                            "UPDATE MISP.HF_JOB_QUEUE " +
+                            "   SET FETCHED_AT = SYS_EXTRACT_UTC(SYSTIMESTAMP), FETCH_TOKEN = :FETCH_TOKEN " +
+                            " WHERE (FETCHED_AT IS NULL OR FETCHED_AT < SYS_EXTRACT_UTC(SYSTIMESTAMP) + INTERVAL '10' SECOND) " +
+                            "   AND QUEUE IN :QUEUES " +
                             "   AND ROWNUM = 1;",
                             new
                             {
@@ -60,15 +62,14 @@ namespace Hangfire.Oracle.Core.JobQueue
                         {
                             fetchedJob =
                                 connection
-                                    .Query<FetchedJob>(
-                                        "select Id, JobId, Queue " +
-                                        "from JobQueue " +
-                                        "where FetchToken = @fetchToken;",
+                                    .QuerySingle<FetchedJob>(
+                                        "SELECT ID as Id, JOB_ID as JobId, QUEUE as Queue " +
+                                        "  FROM MISP.HF_JOB_QUEUE " +
+                                        " WHERE FETCH_TOKEN = :FETCH_TOKEN;",
                                         new
                                         {
-                                            fetchToken = token
-                                        })
-                                    .SingleOrDefault();
+                                            FETCH_TOKEN = token
+                                        });
                         }
                     }
                 }
@@ -94,7 +95,7 @@ namespace Hangfire.Oracle.Core.JobQueue
         public void Enqueue(IDbConnection connection, string queue, string jobId)
         {
             Logger.TraceFormat("Enqueue JobId={0} Queue={1}", jobId, queue);
-            connection.Execute("INSERT INTO JobQueue (JobId, Queue) values (:JOB_ID, :QUEUE)", new { JOB_ID = jobId, QUEUE = queue });
+            connection.Execute("INSERT INTO MISP.HF_JOB_QUEUE (ID, JOB_ID, QUEUE) values (MISP.HF_SEQUENCE.NEXTVAL, :JOB_ID, :QUEUE)", new { JOB_ID = jobId, QUEUE = queue });
         }
     }
 }

@@ -60,7 +60,7 @@ namespace Hangfire.Oracle.Core.Monitoring
             return UseConnection<IList<ServerDto>>(connection =>
             {
                 var servers =
-                    connection.Query<Entities.Server>("select * from Server").ToList();
+                    connection.Query<Entities.Server>("SELECT * FROM MISP.HF_SERVER").ToList();
 
                 var result = new List<ServerDto>();
 
@@ -85,16 +85,18 @@ namespace Hangfire.Oracle.Core.Monitoring
         {
             return UseConnection(connection =>
             {
+                const string sql = @"
+ SELECT ID as Id, STATE_ID as StateId, STATE_NAME as StateName, INVOCATION_DATA as InvocationData, ARGUMENTS as Arguments, CREATED_AT as CreatedAt, EXPIRE_AT as ExpireAt FROM MISP.HF_JOB WHERE ID = :ID;
+ SELECT ID as Id, NAME as Name, VALUE as Value, JOB_ID as JobId FROM MISP.HF_JOB_PARAMETER WHERE JOB_ID = :ID;
+ SELECT ID as Id, JOB_ID as JobId, NAME as Name, REASON as Reason, CREATED_AT as CreatedAt, DATA as Data FROM MISP.HF_JOB_STATE where JOB_ID = :ID ORDER BY ID DESC;";
 
-                string sql = @"
-select * from Job where Id = @id;
-select * from JobParameter where JobId = @id;
-select * from State where JobId = @id order by Id desc;";
-
-                using (var multi = connection.QueryMultiple(sql, new { id = jobId }))
+                using (var multi = connection.QueryMultiple(sql, new { ID = jobId }))
                 {
                     var job = multi.Read<SqlJob>().SingleOrDefault();
-                    if (job == null) return null;
+                    if (job == null)
+                    {
+                        return null;
+                    }
 
                     var parameters = multi.Read<JobParameter>().ToDictionary(x => x.Name, x => x.Value);
                     var history =
@@ -105,9 +107,7 @@ select * from State where JobId = @id order by Id desc;";
                                 StateName = x.Name,
                                 CreatedAt = x.CreatedAt,
                                 Reason = x.Reason,
-                                Data = new Dictionary<string, string>(
-                                    JobHelper.FromJson<Dictionary<string, string>>(x.Data),
-                                    StringComparer.OrdinalIgnoreCase),
+                                Data = new Dictionary<string, string>(JobHelper.FromJson<Dictionary<string, string>>(x.Data), StringComparer.OrdinalIgnoreCase),
                             })
                             .ToList();
 
@@ -125,27 +125,27 @@ select * from State where JobId = @id order by Id desc;";
 
         public StatisticsDto GetStatistics()
         {
-            const string jobQuery = "select count(Id) from Job where StateName = @stateName";
+            const string jobQuery = "SELECT COUNT(ID) FROM MISP.HF_JOB WHERE STATE_NAME = :STATE_NAME";
             const string succeededQuery = @"
-select sum(s.`Value`) from (
-    select sum(`Value`) as `Value` from Counter where `Key` = @key
-    union all
-    select `Value` from AggregatedCounter where `Key` = @key
-) as s;";
+ SELECT SUM(S.VALUE) FROM (
+     SELECT SUM(VALUE) AS VALUE FROM MISP.HF_COUNTER WHERE KEY = :KEY
+     UNION ALL
+     SELECT VALUE FROM MISP.HF_AGGREGATED_COUNTER WHERE KEY = :KEY) AS S
+";
 
             var statistics =
                 UseConnection(connection =>
                     new StatisticsDto
                     {
-                        Enqueued = connection.ExecuteScalar<int>(jobQuery, new { stateName = "Enqueued" }),
-                        Failed = connection.ExecuteScalar<int>(jobQuery, new { stateName = "Failed" }),
-                        Processing = connection.ExecuteScalar<int>(jobQuery, new { stateName = "Processing" }),
-                        Scheduled = connection.ExecuteScalar<int>(jobQuery, new { stateName = "Scheduled" }),
-                        Servers = connection.ExecuteScalar<int>("select count(Id) from Server"),
-                        Succeeded = connection.ExecuteScalar<int>(succeededQuery, new { key = "stats:succeeded" }),
-                        Deleted = connection.ExecuteScalar<int>(succeededQuery, new { key = "stats:deleted" }),
+                        Enqueued = connection.ExecuteScalar<int>(jobQuery, new { STATE_NAME = "Enqueued" }),
+                        Failed = connection.ExecuteScalar<int>(jobQuery, new { STATE_NAME = "Failed" }),
+                        Processing = connection.ExecuteScalar<int>(jobQuery, new { STATE_NAME = "Processing" }),
+                        Scheduled = connection.ExecuteScalar<int>(jobQuery, new { STATE_NAME = "Scheduled" }),
+                        Servers = connection.ExecuteScalar<int>("SELECT COUNT(ID) FROM MISP.HF_SERVER"),
+                        Succeeded = connection.ExecuteScalar<int>(succeededQuery, new { KEY = "stats:succeeded" }),
+                        Deleted = connection.ExecuteScalar<int>(succeededQuery, new { KEY = "stats:deleted" }),
                         Recurring =
-                            connection.ExecuteScalar<int>("select count(*) from `Set` where `Key` = 'recurring-jobs'")
+                            connection.ExecuteScalar<int>("SELECT COUNT(*) FROM MISP.HF_SET where KEY = 'recurring-jobs'")
                     });
 
             statistics.Queues = _storage.QueueProviders
@@ -327,13 +327,12 @@ select sum(s.`Value`) from (
         private long GetNumberOfJobsByStateName(IDbConnection connection, string stateName)
         {
             var sqlQuery = _jobListLimit.HasValue
-                ? "select count(j.Id) from (select Id from Job where StateName = @state limit @limit) as j"
-                : "select count(Id) from Job where StateName = @state";
+                ? "SELECT COUNT(J.ID) FROM (SELECT ID FROM MISP.HF_JOB WHERE STATE_NAME = :STATE_NAME AND ROWNUM <= :LIMIT) AS J"
+                : "SELECT COUNT(ID) FROM MISP.HF_JOB WHERE STATE_NAME = :STATE_NAME";
 
-            var count = connection.Query<int>(
+            var count = connection.QuerySingle<int>(
                  sqlQuery,
-                 new { state = stateName, limit = _jobListLimit })
-                 .Single();
+                 new { STATE_NAME = stateName, LIMIT = _jobListLimit });
 
             return count;
         }
@@ -345,26 +344,23 @@ select sum(s.`Value`) from (
             return monitoringApi;
         }
 
-        private JobList<TDto> GetJobs<TDto>(
-            IDbConnection connection,
-            int from,
-            int count,
-            string stateName,
+        private JobList<TDto> GetJobs<TDto>(IDbConnection connection, int from, int count, string stateName,
             Func<SqlJob, Job, Dictionary<string, string>, TDto> selector)
         {
-            const string jobsSql = @"select * from (
-  select j.*, s.Reason as StateReason, s.Data as StateData, @rownum := @rownum + 1 AS rankvalue
-  from Job j
+            // TODO: QUERY fix
+            const string jobsSql = @"SELECT * FROM (
+  SELECT J.ID AS Id, J.STATE_ID AS StateId, J.STATE_NAME AS StateName, J.INVOCATION_DATA AS InvocationData, J.ARGUMENTS AS Arguments, J.CREATED_AT AS CreatedAt, J.EXPIRE_AT AS ExpireAt, S.REASON AS StateReason, S.DATA AS StateData , s.Reason as StateReason, s.Data as StateData, @rownum := @rownum + 1 AS rankvalue
+    FROM MISP.HF_JOB J
     cross join (SELECT @rownum := 0) r
   left join State s on j.StateId = s.Id
-  where j.StateName = @stateName
+  where j.StateName = :STATE_NAME
   order by j.Id desc
-) as j where j.rankvalue between @start and @end ";
+) as j where j.rankvalue between :START and :END ";
 
             var jobs =
                 connection.Query<SqlJob>(
                     jobsSql,
-                    new { stateName = stateName, start = @from + 1, end = @from + count })
+                    new { STATE_NAME = stateName, START = @from + 1, END = @from + count })
                     .ToList();
 
             return DeserializeJobs(jobs, selector);
@@ -424,12 +420,11 @@ select sum(s.`Value`) from (
             return GetTimelineStats(connection, keyMaps);
         }
 
-        private Dictionary<DateTime, long> GetTimelineStats(IDbConnection connection,
-            IDictionary<string, DateTime> keyMaps)
+        private Dictionary<DateTime, long> GetTimelineStats(IDbConnection connection, IDictionary<string, DateTime> keyMaps)
         {
             var valuesMap = connection.Query(
-                "select `Key`, `Value` as `Count` from AggregatedCounter where `Key` in @keys",
-                new { keys = keyMaps.Keys })
+                "SELECT KEY AS Key, VALUE AS Count FROM MISP.HF_AGGREGATED_COUNTER WHERE KEY in :KEYS",
+                new { KEYS = keyMaps.Keys })
                 .ToDictionary(x => (string)x.Key, x => (long)x.Count);
 
             foreach (var key in keyMaps.Keys)
@@ -447,23 +442,24 @@ select sum(s.`Value`) from (
             return result;
         }
 
-        private JobList<EnqueuedJobDto> EnqueuedJobs(
-            IDbConnection connection,
-            IEnumerable<int> jobIds)
+        private JobList<EnqueuedJobDto> EnqueuedJobs(IDbConnection connection, IEnumerable<int> jobIds)
         {
             var enumerable = jobIds as int[] ?? jobIds.ToArray();
-            string enqueuedJobsSql =
-@"select j.*, s.Reason as StateReason, s.Data as StateData 
-from Job j
-left join State s on s.Id = j.StateId
-where j.Id in @jobIds";
+            var enqueuedJobsSql = @"
+ SELECT J.ID AS Id, J.STATE_ID AS StateId, J.STATE_NAME AS StateName, J.INVOCATION_DATA AS InvocationData, J.ARGUMENTS AS Arguments, J.CREATED_AT AS CreatedAt, J.EXPIRE_AT AS ExpireAt, S.REASON AS StateReason, S.DATA AS StateData
+   FROM MISP.HF_JOB J
+ LEFT JOIN MISP.HF_JOB_STATE S 
+     ON S.ID = J.STATE_ID
+  WHERE J.ID in :JOB_IDS";
 
             if (!enumerable.Any())
             {
-                enqueuedJobsSql =
-                    @"select j.*, s.Reason as StateReason, s.Data as StateData 
-from Job j
-left join State s on s.Id = j.StateId ";
+                enqueuedJobsSql = @"
+ SELECT J.ID AS Id, J.STATE_ID AS StateId, J.STATE_NAME AS StateName, J.INVOCATION_DATA AS InvocationData, J.ARGUMENTS AS Arguments, J.CREATED_AT AS CreatedAt, J.EXPIRE_AT AS ExpireAt, S.REASON AS StateReason, S.DATA AS StateData
+   FROM MISP.HF_JOB J
+ LEFT JOIN MISP.HF_JOB_STATE S 
+     ON S.ID = J.STATE_ID
+";
             }
             var jobs = connection.Query<SqlJob>(
                 enqueuedJobsSql,
@@ -482,40 +478,31 @@ left join State s on s.Id = j.StateId ";
                 });
         }
 
-        private JobList<FetchedJobDto> FetchedJobs(
-            IDbConnection connection,
-            IEnumerable<int> jobIds)
+        private JobList<FetchedJobDto> FetchedJobs(IDbConnection connection, IEnumerable<int> jobIds)
         {
-            string fetchedJobsSql = @"
-select j.*, s.Reason as StateReason, s.Data as StateData 
-from Job j
-left join State s on s.Id = j.StateId
-where j.Id in @jobIds";
+            const string fetchedJobsSql = @"
+ SELECT J.ID AS Id, J.STATE_ID AS StateId, J.STATE_NAME AS StateName, J.INVOCATION_DATA AS InvocationData, J.ARGUMENTS AS Arguments, J.CREATED_AT AS CreatedAt, J.EXPIRE_AT AS ExpireAt, S.REASON AS StateReason, S.DATA AS StateData 
+   FROM MISP.HF_JOB J
+ LEFT JOIN MISP.HF_JOB_STATE S ON S.ID = J.STATE_ID
+  WHERE J.ID IN :JOB_IDS";
 
-            var jobs = connection.Query<SqlJob>(
-                fetchedJobsSql,
-                new { jobIds = jobIds })
-                .ToList();
+            var jobs = connection.Query<SqlJob>(fetchedJobsSql, new { JOB_IDS = jobIds }).ToList();
 
             var result = new List<KeyValuePair<string, FetchedJobDto>>(jobs.Count);
 
             foreach (var job in jobs)
             {
-                result.Add(new KeyValuePair<string, FetchedJobDto>(
-                    job.Id.ToString(),
-                    new FetchedJobDto
-                    {
-                        Job = DeserializeJob(job.InvocationData, job.Arguments),
-                        State = job.StateName,
-                    }));
+                result.Add(new KeyValuePair<string, FetchedJobDto>(job.Id.ToString(), new FetchedJobDto
+                {
+                    Job = DeserializeJob(job.InvocationData, job.Arguments),
+                    State = job.StateName,
+                }));
             }
 
             return new JobList<FetchedJobDto>(result);
         }
 
-        private Dictionary<DateTime, long> GetHourlyTimelineStats(
-            IDbConnection connection,
-            string type)
+        private Dictionary<DateTime, long> GetHourlyTimelineStats(IDbConnection connection, string type)
         {
             var endDate = DateTime.UtcNow;
             var dates = new List<DateTime>();
