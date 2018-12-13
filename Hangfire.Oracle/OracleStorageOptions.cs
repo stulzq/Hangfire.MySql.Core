@@ -17,7 +17,6 @@ namespace Hangfire.Oracle.Core
             DashboardJobListLimit = 50000;
             TransactionTimeout = TimeSpan.FromMinutes(1);
             InvisibilityTimeout = TimeSpan.FromMinutes(30);
-            SchemaName = "MISP";
         }
 
         public IsolationLevel? TransactionIsolationLevel { get; set; }
@@ -53,18 +52,5 @@ namespace Hangfire.Oracle.Core
         public TimeSpan InvisibilityTimeout { get; set; }
 
         public string SchemaName { get; set; }
-
-        internal string InternalSchemaName
-        {
-            get
-            {
-                if (string.IsNullOrWhiteSpace(SchemaName))
-                {
-                    return string.Empty;
-                }
-
-                return SchemaName + ".";
-            }
-        }
     }
 }
