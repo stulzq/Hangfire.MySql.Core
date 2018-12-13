@@ -1,14 +1,16 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFrameworks>netstandard2.0</TargetFrameworks>
+    <Title>Hangfire.Oracle.Core</Title>
+    <Summary>Hangfire's Oracle storage</Summary>
     <Description>Hangfire's Oracle storage.</Description>
     <PackageId>Hangfire.Oracle.Core</PackageId>
     <Product>Hangfire.Oracle.Core</Product>
     <Company>akoylu</Company>
     <Authors>akoylu</Authors>
-    <Owners>Arnoldas Gudas</Owners>
+    <Owners>Ahmet Köylü</Owners>
     <PackageLicenseUrl>https://github.com/akoylu/Hangfire.Oracle.Core/blob/master/License.md</PackageLicenseUrl>
-    <PackageProjectUrl>https://github.com/stulzq/Hangfire.Oracle.Core</PackageProjectUrl>
+    <PackageProjectUrl>https://github.com/akoylu/Hangfire.Oracle.Core</PackageProjectUrl>
     <Copyright>Copyright 2018</Copyright>
     <PackageTags>Hangfire Oracle Hangfire.Oracle Hangfire.MySql.Core</PackageTags>
     <Version>1.0.0</Version>
