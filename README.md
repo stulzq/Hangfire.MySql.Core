@@ -1,10 +1,10 @@
-# Hangfire.MySql.Core Implementation
+# Hangfire.Oracle.Core Implementation
 
-Hangfire.MySql.Core is based on Hangfire.MySqlStorage(https://github.com/arnoldasgudas/Hangfire.MySqlStorage)
+Hangfire.Oracle.Core is based on Hangfire.MySqlStorage(https://github.com/arnoldasgudas/Hangfire.MySqlStorage)
 
 I fix some bug and support .net standard 2.0
 
-[![Latest version](https://img.shields.io/nuget/v/Hangfire.MySql.Core.svg)](https://www.nuget.org/packages/Hangfire.MySql.Core/) 
+[![Latest version](https://img.shields.io/nuget/v/Hangfire.MySql.Core.svg)](https://www.nuget.org/packages/Hangfire.Oracle.Core/) 
 
 MySql storage implementation of [Hangfire](http://hangfire.io/) - fire-and-forget, delayed and recurring tasks runner for .NET. Scalable and reliable background job runner. Supports multiple servers, CPU and I/O intensive, long-running and short-running jobs.
 
