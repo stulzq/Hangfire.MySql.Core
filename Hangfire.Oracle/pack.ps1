@@ -1,1 +1,1 @@
-nuget pack Hangfire.Oracle.Core.csproj -IncludeReferencedProjects -Prop Configuration=Release -version ???
+nuget pack Hangfire.Oracle.Core.csproj -IncludeReferencedProjects -Prop Configuration=Release -version $Args
