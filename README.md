@@ -4,36 +4,35 @@ Hangfire.Oracle.Core is based on Hangfire.MySqlStorage(https://github.com/arnold
 
 I fix some bug and support .net standard 2.0
 
-[![Latest version](https://img.shields.io/nuget/v/Hangfire.MySql.Core.svg)](https://www.nuget.org/packages/Hangfire.Oracle.Core/) 
+[![Latest version](https://img.shields.io/nuget/v/Hangfire.Oracle.Core.svg)](https://www.nuget.org/packages/Hangfire.Oracle.Core/) 
 
-MySql storage implementation of [Hangfire](http://hangfire.io/) - fire-and-forget, delayed and recurring tasks runner for .NET. Scalable and reliable background job runner. Supports multiple servers, CPU and I/O intensive, long-running and short-running jobs.
+Oracle storage implementation of [Hangfire](http://hangfire.io/) - fire-and-forget, delayed and recurring tasks runner for .NET. Scalable and reliable background job runner. Supports multiple servers, CPU and I/O intensive, long-running and short-running jobs.
 
-**Some features of MySql storage implementation is under development!**
+**Some features of Oracle storage implementation is under development!**
 
 ## Installation
-Install MySQL
+Install Oracle
 
-Run the following command in the NuGet Package Manager console to install Hangfire.MySql.Core:
+Run the following command in the NuGet Package Manager console to install Hangfire.Oracle.Core:
 
 ```
-Install-Package Hangfire.MySql.Core
+Install-Package Hangfire.Oracle.Core
 ```
 
 ## Usage
 
-Use one the following ways to initialize `MySqlStorage`: 
-- Create new instance of `MySqlStorage` with connection string constructor parameter and pass it to `Configuration` with `UseStorage` method:
+Use one the following ways to initialize `OracleStorage`: 
+- Create new instance of `OracleStorage` with connection string constructor parameter and pass it to `Configuration` with `UseStorage` method:
 ```
   GlobalConfiguration.Configuration.UseStorage(
-    new MySqlStorage(connectionString));
+    new OracleStorage(connectionString));
 ```
-- There must be `Allow User Variables` set to `true` in the connection string. For example: `server=127.0.0.1;uid=root;pwd=root;database={0};Allow User Variables=True`
-- Alternatively one or more options can be passed as a parameter to `MySqlStorage`:
+- Alternatively one or more options can be passed as a parameter to `OracleStorage`:
 ```
 GlobalConfiguration.Configuration.UseStorage(
-    new MySqlStorage(
+    new OracleStorage(
         connectionString, 
-        new MySqlStorageOptions
+        new OracleStorageOptions
         {
             TransactionIsolationLevel = IsolationLevel.ReadCommitted,
             QueuePollInterval = TimeSpan.FromSeconds(15),
@@ -42,16 +41,18 @@ GlobalConfiguration.Configuration.UseStorage(
             PrepareSchemaIfNecessary = true,
             DashboardJobListLimit = 50000,
             TransactionTimeout = TimeSpan.FromMinutes(1),
+            SchemaName = "HANGFIRE"
         }));
 ```
 Description of optional parameters:
-- `TransactionIsolationLevel` - transaction isolation level. Default is read committed.
+- `TransactionIsolationLevel` - transaction isolation level. Default is read committed. Didn't test with other options!
 - `QueuePollInterval` - job queue polling interval. Default is 15 seconds.
 - `JobExpirationCheckInterval` - job expiration check interval (manages expired records). Default is 1 hour.
 - `CountersAggregateInterval` - interval to aggregate counter. Default is 5 minutes.
 - `PrepareSchemaIfNecessary` - if set to `true`, it creates database tables. Default is `true`.
 - `DashboardJobListLimit` - dashboard job list limit. Default is 50000.
 - `TransactionTimeout` - transaction timeout. Default is 1 minute.
+- `SchemaName` - schema name. Default is empty
 
 ### How to limit number of open connections
 
@@ -72,12 +73,3 @@ More info: [Hangfire Overview](http://hangfire.io/overview.html#integrated-monit
 
 ## Build
 Please use Visual Studio or any other tool of your choice to build the solution
-
-## Test
-In order to run unit tests and integrational tests set the following variables in you system environment variables (restart of Visual Studio is required):
-
-`Hangfire_SqlServer_ConnectionStringTemplate` (default: `server=127.0.0.1;uid=root;pwd=root;database={0};Allow User Variables=True`)
-
-`Hangfire_SqlServer_DatabaseName` (default: `Hangfire.MySql.Tests`)
-
-
