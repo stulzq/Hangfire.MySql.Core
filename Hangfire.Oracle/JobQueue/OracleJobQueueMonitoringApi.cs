@@ -27,7 +27,7 @@ namespace Hangfire.Oracle.Core.JobQueue
                 {
                     var result = _storage.UseConnection(connection =>
                     {
-                        return connection.Query("SELECT DISTINCT(QUEUE) as QUEUE FROM MISP.HF_JOB_QUEUE").Select(x => (string)x.QUEUE).ToList();
+                        return connection.Query("SELECT DISTINCT(QUEUE) as QUEUE FROM HF_JOB_QUEUE").Select(x => (string)x.QUEUE).ToList();
                     });
 
                     _queuesCache = result;
@@ -43,7 +43,7 @@ namespace Hangfire.Oracle.Core.JobQueue
             const string sqlQuery = @"
 SELECT JOB_ID AS JobId
   FROM (SELECT JOB_ID, RANK () OVER (ORDER BY ID) AS RANK
-          FROM MISP.HF_JOB_QUEUE
+          FROM HF_JOB_QUEUE
          WHERE QUEUE = :QUEUE)
  WHERE RANK BETWEEN :S AND :E
 ";
@@ -61,7 +61,7 @@ SELECT JOB_ID AS JobId
         {
             return _storage.UseConnection(connection =>
             {
-                var result = connection.QuerySingle<int>("SELECT COUNT(ID) FROM MISP.HF_JOB_QUEUE WHERE QUEUE = :QUEUE", new { QUEUE = queue });
+                var result = connection.QuerySingle<int>("SELECT COUNT(ID) FROM HF_JOB_QUEUE WHERE QUEUE = :QUEUE", new { QUEUE = queue });
 
                 return new EnqueuedAndFetchedCountDto
                 {

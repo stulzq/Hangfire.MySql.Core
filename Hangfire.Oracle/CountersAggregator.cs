@@ -57,10 +57,10 @@ namespace Hangfire.Oracle.Core
         {
             return @"
 BEGIN
-    MERGE INTO MISP.HF_AGGREGATED_COUNTER AC
+    MERGE INTO HF_AGGREGATED_COUNTER AC
          USING (  SELECT KEY, SUM (VALUE) AS VALUE, MAX (EXPIRE_AT) AS EXPIRE_AT
                     FROM (SELECT KEY, VALUE, EXPIRE_AT
-                            FROM MISP.HF_COUNTER
+                            FROM HF_COUNTER
                            WHERE ROWNUM <= :COUNT) TMP
                 GROUP BY KEY) C
             ON (AC.KEY = C.KEY)
@@ -73,12 +73,12 @@ BEGIN
                   ,KEY
                   ,VALUE
                   ,EXPIRE_AT)
-           VALUES (MISP.HF_SEQUENCE.NEXTVAL
+           VALUES (HF_SEQUENCE.NEXTVAL
                   ,C.KEY
                   ,C.VALUE
                   ,C.EXPIRE_AT);
 
-   DELETE FROM MISP.HF_COUNTER
+   DELETE FROM HF_COUNTER
     WHERE ROWNUM <= :COUNT;
 END;
 ";
@@ -87,7 +87,7 @@ END;
         private static string GetDeleteQuery()
         {
             return @"
- DELETE FROM MISP.HF_COUNTER
+ DELETE FROM HF_COUNTER
   WHERE ROWNUM <= :COUNT
 ";
         }

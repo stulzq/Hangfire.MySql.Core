@@ -55,7 +55,7 @@ namespace Hangfire.Oracle.Core.JobQueue
 
             //todo: unit test
             _connection.Execute(
-                "DELETE FROM MISP.HF_JOB_QUEUE " +
+                "DELETE FROM HF_JOB_QUEUE " +
                 " WHERE ID = :ID",
                 new
                 {
@@ -71,7 +71,7 @@ namespace Hangfire.Oracle.Core.JobQueue
 
             //todo: unit test
             _connection.Execute(
-                "UPDATE MISP.HF_JOB_QUEUE " +
+                "UPDATE HF_JOB_QUEUE " +
                 "   SET FETCHED_AT = null " +
                 " WHERE ID = :ID",
                 new

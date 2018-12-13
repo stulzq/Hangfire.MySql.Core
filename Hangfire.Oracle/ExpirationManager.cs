@@ -66,7 +66,7 @@ namespace Hangfire.Oracle.Core
                                     cancellationToken).Acquire())
                             {
                                 removedCount = connection.Execute(
-                                    $"DELETE FROM MISP.{table} WHERE EXPIRE_AT < :NOW AND ROWNUM <= :COUNT",
+                                    $"DELETE FROM {table} WHERE EXPIRE_AT < :NOW AND ROWNUM <= :COUNT",
                                     new { NOW = DateTime.UtcNow, COUNT = NumberOfRecordsInSinglePass });
                             }
 

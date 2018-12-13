@@ -54,7 +54,7 @@ namespace Hangfire.Oracle.Core
                 var jobId = connection.GetNextJobId();
                 connection.Execute(
                     @" 
- INSERT INTO MISP.HF_JOB (ID, INVOCATION_DATA, ARGUMENTS, CREATED_AT, EXPIRE_AT) 
+ INSERT INTO HF_JOB (ID, INVOCATION_DATA, ARGUMENTS, CREATED_AT, EXPIRE_AT) 
       VALUES (:ID, :INVOCATION_DATA, :ARGUMENTS, :CREATED_AT, :EXPIRE_AT)
 ",
                     new
@@ -80,7 +80,7 @@ namespace Hangfire.Oracle.Core
                         };
                     }
 
-                    connection.Execute(@"INSERT INTO MISP.HF_JOB_PARAMETER (ID, NAME, VALUE, JOB_ID) VALUES (MISP.HF_SEQUENCE.NEXTVAL, :NAME, :VALUE, :JOB_ID)", parameterArray);
+                    connection.Execute(@"INSERT INTO HF_JOB_PARAMETER (ID, NAME, VALUE, JOB_ID) VALUES (HF_SEQUENCE.NEXTVAL, :NAME, :VALUE, :JOB_ID)", parameterArray);
                 }
 
                 return jobId.ToString();
@@ -125,14 +125,14 @@ namespace Hangfire.Oracle.Core
             {
                 connection.Execute(
                     @" 
- MERGE INTO MISP.HF_JOB_PARAMETER JP
+ MERGE INTO HF_JOB_PARAMETER JP
       USING (SELECT 1 FROM DUAL) SRC
          ON (JP.ID = :ID)
  WHEN MATCHED THEN
       UPDATE SET VALUE = :VALUE
  WHEN NOT MATCHED THEN
       INSERT (ID, JOB_ID, NAME, VALUE)
-      VALUES (MISP.HF_SEQUENCE.NEXTVAL, :JOB_ID, :NAME, :VALUE)
+      VALUES (HF_SEQUENCE.NEXTVAL, :JOB_ID, :NAME, :VALUE)
 ",
                     new { JOB_ID = id, NAME = name, VALUE = value });
             });
@@ -153,7 +153,7 @@ namespace Hangfire.Oracle.Core
             return _storage.UseConnection(connection =>
                 connection.QuerySingleOrDefault<string>(
                     "SELECT VALUE as Value " +
-                    "  FROM MISP.HF_JOB_PARAMETER " +
+                    "  FROM HF_JOB_PARAMETER " +
                     " WHERE JOB_ID = :ID AND NAME = :NAME",
                     new { ID = id, NAME = name }));
         }
@@ -169,7 +169,7 @@ namespace Hangfire.Oracle.Core
             {
                 var jobData = connection.QuerySingleOrDefault<SqlJob>(
                             "SELECT INVOCATION_DATA AS InvocationData, STATE_NAME AS StateName, ARGUMENTS AS Arguments, CREATED_AT AS CreatedAt " +
-                            "  FROM MISP.HF_JOB " +
+                            "  FROM HF_JOB " +
                             " WHERE ID = :ID",
                             new { ID = jobId });
 
@@ -214,8 +214,8 @@ namespace Hangfire.Oracle.Core
             {
                 var sqlState = connection.QuerySingleOrDefault<SqlState>(
                         " SELECT S.NAME AS Name, S.REASON AS Reason, S.DATA AS Data " +
-                        "   FROM MISP.HF_JOB_STATE S" +
-                        "  INNER JOIN MISP.HF_JOB J" +
+                        "   FROM HF_JOB_STATE S" +
+                        "  INNER JOIN HF_JOB J" +
                         "    ON J.STATE_ID = S.ID " +
                         " WHERE J.ID = :JOB_ID",
                         new { JOB_ID = jobId });
@@ -254,7 +254,7 @@ namespace Hangfire.Oracle.Core
             {
                 connection.Execute(
                     @"
- MERGE INTO MISP.HF_SERVER S
+ MERGE INTO HF_SERVER S
       USING (SELECT 1 FROM DUAL) SRC
          ON (S.ID = :ID)
  WHEN MATCHED THEN
@@ -287,7 +287,7 @@ namespace Hangfire.Oracle.Core
             _storage.UseConnection(connection =>
             {
                 connection.Execute(
-                    "DELETE FROM MISP.HF_SERVER where ID = :ID",
+                    "DELETE FROM HF_SERVER where ID = :ID",
                     new { ID = serverId });
             });
         }
@@ -302,7 +302,7 @@ namespace Hangfire.Oracle.Core
             _storage.UseConnection(connection =>
             {
                 connection.Execute(
-                    " UPDATE MISP.HF_SERVER" +
+                    " UPDATE HF_SERVER" +
                     "    SET LAST_HEART_BEAT = :NOW" +
                     "  WHERE ID = :ID",
                     new { NOW = DateTime.UtcNow, ID = serverId });
@@ -319,7 +319,7 @@ namespace Hangfire.Oracle.Core
             return
                 _storage.UseConnection(connection =>
                     connection.Execute(
-                        " DELETE FROM MISP.HF_SERVER" +
+                        " DELETE FROM HF_SERVER" +
                         "  WHERE LAST_HEART_BEAT < :TIME_OUT_AT",
                         new { TIME_OUT_AT = DateTime.UtcNow.Add(timeOut.Negate()) }));
         }
@@ -332,7 +332,7 @@ namespace Hangfire.Oracle.Core
                 _storage.UseConnection(connection =>
                     connection.QueryFirst<int>(
                         "SELECT COUNT(KEY) " +
-                        "  FROM MISP.HF_SET" +
+                        "  FROM HF_SET" +
                         " WHERE KEY = :KEY",
                         new { KEY = key }));
         }
@@ -348,7 +348,7 @@ namespace Hangfire.Oracle.Core
                 connection.Query<string>(@"
 SELECT VALUE as Value
   FROM (SELECT VALUE, RANK () OVER (ORDER BY ID) AS RANK
-          FROM MISP.HF_SET
+          FROM HF_SET
          WHERE KEY = :KEY)
  WHERE RANK BETWEEN :S AND :E
 ",
@@ -367,7 +367,7 @@ SELECT VALUE as Value
                 {
                     var result = connection.Query<string>(
                         "SELECT VALUE AS Value" +
-                        "  FROM MISP.HF_SET" +
+                        "  FROM HF_SET" +
                         " WHERE KEY = :KEY",
                         new { KEY = key });
 
@@ -393,7 +393,7 @@ SELECT VALUE as Value
                         @"
 SELECT *
   FROM (  SELECT VALUE AS Value
-            FROM MISP.HF_SET
+            FROM HF_SET
            WHERE KEY = :KEY AND SCORE BETWEEN :F AND :T
         ORDER BY SCORE)
  WHERE ROWNUM = 1
@@ -411,11 +411,11 @@ SELECT *
             const string query = @"
  SELECT SUM(S.Value)
    FROM (SELECT SUM(VALUE) AS Value
-   FROM MISP.HF_COUNTER
+   FROM HF_COUNTER
   WHERE KEY = :KEY
  UNION ALL
  SELECT VALUE as Value
-  FROM MISP.HF_AGGREGATED_COUNTER
+  FROM HF_AGGREGATED_COUNTER
  WHERE KEY = :KEY) AS S";
 
             return
@@ -432,7 +432,7 @@ SELECT *
                 _storage
                     .UseConnection(connection =>
                         connection.QuerySingle<long>(
-                            "SELECT COUNT(ID) FROM MISP.HF_HASH WHERE KEY = :KEY",
+                            "SELECT COUNT(ID) FROM HF_HASH WHERE KEY = :KEY",
                             new { KEY = key }));
         }
 
@@ -444,7 +444,7 @@ SELECT *
             {
                 var result =
                     connection.QuerySingle<DateTime?>(
-                        "SELECT MIN(EXPIRE_AT) FROM MISP.HF_HASH WHERE KEY = :KEY",
+                        "SELECT MIN(EXPIRE_AT) FROM HF_HASH WHERE KEY = :KEY",
                         new { KEY = key });
 
                 if (!result.HasValue)
@@ -464,7 +464,7 @@ SELECT *
                 _storage
                     .UseConnection(connection =>
                         connection.QuerySingle<long>(
-                            "SELECT COUNT(ID) FROM MISP.HF_LIST WHERE KEY = :KEY",
+                            "SELECT COUNT(ID) FROM HF_LIST WHERE KEY = :KEY",
                             new { KEY = key }));
         }
 
@@ -475,7 +475,7 @@ SELECT *
             return _storage.UseConnection(connection =>
             {
                 var result = connection.QuerySingle<DateTime?>(
-                        "SELECT MIN(EXPIRE_AT) FROM MISP.HF_LIST WHERE KEY = :KEY",
+                        "SELECT MIN(EXPIRE_AT) FROM HF_LIST WHERE KEY = :KEY",
                         new { KEY = key });
 
                 if (!result.HasValue)
@@ -496,7 +496,7 @@ SELECT *
                 _storage
                     .UseConnection(connection =>
                         connection.QuerySingleOrDefault<string>(
-                            "SELECT VALUE AS Value FROM MISP.HF_HASH WHERE KEY = :KEY and FIELD = :FIELD",
+                            "SELECT VALUE AS Value FROM HF_HASH WHERE KEY = :KEY and FIELD = :FIELD",
                             new { KEY = key, FIELD = name }));
         }
 
@@ -510,7 +510,7 @@ SELECT *
             const string query = @"
 SELECT VALUE as Value
   FROM (SELECT VALUE, RANK () OVER (ORDER BY ID DESC) AS RANK
-          FROM MISP.HF_LIST
+          FROM HF_LIST
          WHERE KEY = :KEY)
  WHERE RANK BETWEEN :S AND :E
 ";
@@ -528,7 +528,7 @@ SELECT VALUE as Value
 
             const string query = @"
  SELECT VALUE AS Value
-   FROM MISP.HF_LIST
+   FROM HF_LIST
   WHERE KEY = :KEY
  ORDER BY ID DESC";
 
@@ -541,7 +541,7 @@ SELECT VALUE as Value
 
             return _storage.UseConnection(connection =>
             {
-                var result = connection.QuerySingle<DateTime?>("SELECT MIN(EXPIRE_AT) FROM MISP.HF_SET WHERE KEY = :KEY", new { KEY = key });
+                var result = connection.QuerySingle<DateTime?>("SELECT MIN(EXPIRE_AT) FROM HF_SET WHERE KEY = :KEY", new { KEY = key });
 
                 if (!result.HasValue)
                 {
@@ -570,14 +570,14 @@ SELECT VALUE as Value
                 {
                     connection.Execute(
                         @"
- MERGE INTO MISP.HF_HASH H
+ MERGE INTO HF_HASH H
       USING (SELECT 1 FROM DUAL) SRC
          ON (H.KEY = :KEY AND H.FIELD = :FIELD)
  WHEN MATCHED THEN
      UPDATE SET VALUE = :VALUE
  WHEN NOT MATCHED THEN
      INSERT (ID, KEY, FIELD, VALUE)
-     VALUES (MISP.HF_SEQUENCE.NEXTVAL, :KEY, :FIELD, :VALUE)
+     VALUES (HF_SEQUENCE.NEXTVAL, :KEY, :FIELD, :VALUE)
 ",
                         new { KEY = key, FIELD = keyValuePair.Key, VALUE = keyValuePair.Value });
                 }
@@ -594,7 +594,7 @@ SELECT VALUE as Value
             return _storage.UseConnection(connection =>
             {
                 var result = connection.Query<SqlHash>(
-                    "SELECT FIELD AS Field, VALUE AS Value FROM MISP.HF_HASH WHERE KEY = :KEY",
+                    "SELECT FIELD AS Field, VALUE AS Value FROM HF_HASH WHERE KEY = :KEY",
                     new { KEY = key })
                     .ToDictionary(x => x.Field, x => x.Value);
 

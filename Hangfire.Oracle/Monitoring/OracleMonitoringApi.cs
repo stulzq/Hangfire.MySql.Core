@@ -61,7 +61,7 @@ namespace Hangfire.Oracle.Core.Monitoring
             return UseConnection<IList<ServerDto>>(connection =>
             {
                 var servers =
-                    connection.Query<Entities.Server>("SELECT ID as ID, DATA as Data, LAST_HEART_BEAT as LastHeartBeat FROM MISP.HF_SERVER").ToList();
+                    connection.Query<Entities.Server>("SELECT ID as ID, DATA as Data, LAST_HEART_BEAT as LastHeartBeat FROM HF_SERVER").ToList();
 
                 var result = new List<ServerDto>();
 
@@ -96,7 +96,7 @@ BEGIN
           ,ARGUMENTS       AS Arguments
           ,CREATED_AT      AS CreatedAt
           ,EXPIRE_AT       AS ExpireAt
-      FROM MISP.HF_JOB
+      FROM HF_JOB
      WHERE ID = :ID;
 
    OPEN :rslt2 FOR
@@ -104,7 +104,7 @@ BEGIN
           ,NAME   AS Name
           ,VALUE  AS Value
           ,JOB_ID AS JobId
-      FROM MISP.HF_JOB_PARAMETER
+      FROM HF_JOB_PARAMETER
      WHERE JOB_ID = :ID;
 
     OPEN :rslt3 FOR
@@ -114,7 +114,7 @@ BEGIN
            ,REASON   AS Reason
            ,CREATED_AT AS CreatedAt
            ,DATA     AS Data
-       FROM MISP.HF_JOB_STATE
+       FROM HF_JOB_STATE
       WHERE JOB_ID = :ID
    ORDER BY ID DESC;
 END;
@@ -160,15 +160,15 @@ END;
 
         public StatisticsDto GetStatistics()
         {
-            const string jobQuery = "SELECT COUNT(ID) FROM MISP.HF_JOB WHERE STATE_NAME = :STATE_NAME";
+            const string jobQuery = "SELECT COUNT(ID) FROM HF_JOB WHERE STATE_NAME = :STATE_NAME";
             const string succeededQuery = @"
  SELECT SUM (VALUE)
    FROM (SELECT SUM (VALUE) AS VALUE
-           FROM MISP.HF_COUNTER
+           FROM HF_COUNTER
           WHERE KEY = :KEY
          UNION ALL
          SELECT VALUE
-           FROM MISP.HF_AGGREGATED_COUNTER
+           FROM HF_AGGREGATED_COUNTER
           WHERE KEY = :KEY)
 ";
 
@@ -180,10 +180,10 @@ END;
                         Failed = connection.ExecuteScalar<int>(jobQuery, new { STATE_NAME = "Failed" }),
                         Processing = connection.ExecuteScalar<int>(jobQuery, new { STATE_NAME = "Processing" }),
                         Scheduled = connection.ExecuteScalar<int>(jobQuery, new { STATE_NAME = "Scheduled" }),
-                        Servers = connection.ExecuteScalar<int>("SELECT COUNT(ID) FROM MISP.HF_SERVER"),
+                        Servers = connection.ExecuteScalar<int>("SELECT COUNT(ID) FROM HF_SERVER"),
                         Succeeded = connection.ExecuteScalar<int>(succeededQuery, new { KEY = "stats:succeeded" }),
                         Deleted = connection.ExecuteScalar<int>(succeededQuery, new { KEY = "stats:deleted" }),
-                        Recurring = connection.ExecuteScalar<int>("SELECT COUNT(*) FROM MISP.HF_SET WHERE KEY = 'recurring-jobs'")
+                        Recurring = connection.ExecuteScalar<int>("SELECT COUNT(*) FROM HF_SET WHERE KEY = 'recurring-jobs'")
                     });
 
             statistics.Queues = _storage.QueueProviders
@@ -341,8 +341,8 @@ END;
         private long GetNumberOfJobsByStateName(IDbConnection connection, string stateName)
         {
             var sqlQuery = _jobListLimit.HasValue
-                ? "SELECT COUNT(ID) FROM (SELECT ID FROM MISP.HF_JOB WHERE STATE_NAME = :STATE_NAME AND ROWNUM <= :LIMIT)"
-                : "SELECT COUNT(ID) FROM MISP.HF_JOB WHERE STATE_NAME = :STATE_NAME";
+                ? "SELECT COUNT(ID) FROM (SELECT ID FROM HF_JOB WHERE STATE_NAME = :STATE_NAME AND ROWNUM <= :LIMIT)"
+                : "SELECT COUNT(ID) FROM HF_JOB WHERE STATE_NAME = :STATE_NAME";
 
             var count = connection.QuerySingle<int>(
                  sqlQuery,
@@ -381,7 +381,7 @@ SELECT Id
               ,S.REASON                                         AS StateReason
               ,S.DATA                                           AS StateData
               ,RANK () OVER (ORDER BY J.ID DESC) AS RANK
-          FROM MISP.HF_JOB J LEFT JOIN MISP.HF_JOB_STATE S ON J.STATE_ID = S.ID
+          FROM HF_JOB J LEFT JOIN HF_JOB_STATE S ON J.STATE_ID = S.ID
          WHERE J.STATE_NAME = :STATE_NAME
                                          )
  WHERE RANK BETWEEN :S AND :E
@@ -443,7 +443,7 @@ SELECT Id
 
         private static Dictionary<DateTime, long> GetTimelineStats(IDbConnection connection, IDictionary<string, DateTime> keyMaps)
         {
-            var valuesMap = connection.Query("SELECT KEY AS Key, VALUE AS Count FROM MISP.HF_AGGREGATED_COUNTER WHERE KEY in :KEYS",
+            var valuesMap = connection.Query("SELECT KEY AS Key, VALUE AS Count FROM HF_AGGREGATED_COUNTER WHERE KEY in :KEYS",
                 new { KEYS = keyMaps.Keys })
                 .ToDictionary(x => (string)x.KEY, x => (long)x.COUNT);
 
@@ -467,8 +467,8 @@ SELECT Id
             var enumerable = jobIds as int[] ?? jobIds.ToArray();
             var enqueuedJobsSql = @"
  SELECT J.ID AS Id, J.STATE_ID AS StateId, J.STATE_NAME AS StateName, J.INVOCATION_DATA AS InvocationData, J.ARGUMENTS AS Arguments, J.CREATED_AT AS CreatedAt, J.EXPIRE_AT AS ExpireAt, S.REASON AS StateReason, S.DATA AS StateData
-   FROM MISP.HF_JOB J
- LEFT JOIN MISP.HF_JOB_STATE S 
+   FROM HF_JOB J
+ LEFT JOIN HF_JOB_STATE S 
      ON S.ID = J.STATE_ID
   WHERE J.ID in :JOB_IDS";
 
@@ -476,8 +476,8 @@ SELECT Id
             {
                 enqueuedJobsSql = @"
  SELECT J.ID AS Id, J.STATE_ID AS StateId, J.STATE_NAME AS StateName, J.INVOCATION_DATA AS InvocationData, J.ARGUMENTS AS Arguments, J.CREATED_AT AS CreatedAt, J.EXPIRE_AT AS ExpireAt, S.REASON AS StateReason, S.DATA AS StateData
-   FROM MISP.HF_JOB J
- LEFT JOIN MISP.HF_JOB_STATE S 
+   FROM HF_JOB J
+ LEFT JOIN HF_JOB_STATE S 
      ON S.ID = J.STATE_ID
 ";
             }
@@ -499,8 +499,8 @@ SELECT Id
         {
             const string fetchedJobsSql = @"
  SELECT J.ID AS Id, J.STATE_ID AS StateId, J.STATE_NAME AS StateName, J.INVOCATION_DATA AS InvocationData, J.ARGUMENTS AS Arguments, J.CREATED_AT AS CreatedAt, J.EXPIRE_AT AS ExpireAt, S.REASON AS StateReason, S.DATA AS StateData 
-   FROM MISP.HF_JOB J
- LEFT JOIN MISP.HF_JOB_STATE S ON S.ID = J.STATE_ID
+   FROM HF_JOB J
+ LEFT JOIN HF_JOB_STATE S ON S.ID = J.STATE_ID
   WHERE J.ID IN :JOB_IDS";
 
             var jobs = connection.Query<SqlJob>(fetchedJobsSql, new { JOB_IDS = jobIds }).ToList();

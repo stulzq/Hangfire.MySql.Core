@@ -4,6 +4,8 @@ using System.Data;
 using System.Linq;
 using System.Text;
 
+using Dapper;
+
 using Hangfire.Annotations;
 using Hangfire.Logging;
 using Hangfire.Oracle.Core.JobQueue;
@@ -193,6 +195,11 @@ namespace Hangfire.Oracle.Core
 
             var connection = new OracleConnection(_connectionString);
             connection.Open();
+
+            if (!string.IsNullOrWhiteSpace(_options.SchemaName))
+            {
+                connection.Execute($"ALTER SESSION SET CURRENT_SCHEMA={_options.SchemaName}");
+            }
 
             return connection;
         }

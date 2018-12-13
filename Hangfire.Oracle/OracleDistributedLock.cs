@@ -52,12 +52,12 @@ namespace Hangfire.Oracle.Core
                 _connection
                     .Execute(
                         @" 
-INSERT INTO MISP.HF_DISTRIBUTED_LOCK (""RESOURCE"", CREATED_AT)
+INSERT INTO HF_DISTRIBUTED_LOCK (""RESOURCE"", CREATED_AT)
                 (SELECT :RES, :NOW
                 FROM DUAL
                 WHERE NOT EXISTS
             (SELECT ""RESOURCE"", CREATED_AT
-                FROM MISP.HF_DISTRIBUTED_LOCK
+                FROM HF_DISTRIBUTED_LOCK
                 WHERE ""RESOURCE"" = :RES AND CREATED_AT > :EXPIRED))
 ", 
                         new
@@ -115,7 +115,7 @@ INSERT INTO MISP.HF_DISTRIBUTED_LOCK (""RESOURCE"", CREATED_AT)
             _connection
                 .Execute(
                     @"
-DELETE FROM MISP.HF_DISTRIBUTED_LOCK 
+DELETE FROM HF_DISTRIBUTED_LOCK 
  WHERE ""RESOURCE"" = :RES
 ",
                     new

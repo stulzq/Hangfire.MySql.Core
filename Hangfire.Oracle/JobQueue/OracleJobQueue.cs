@@ -43,7 +43,7 @@ namespace Hangfire.Oracle.Core.JobQueue
                         var token = Guid.NewGuid().ToString();
 
                         var nUpdated = connection.Execute(@"
-UPDATE MISP.HF_JOB_QUEUE
+UPDATE HF_JOB_QUEUE
    SET FETCHED_AT = SYS_EXTRACT_UTC (SYSTIMESTAMP), FETCH_TOKEN = :FETCH_TOKEN
  WHERE (FETCHED_AT IS NULL OR FETCHED_AT < SYS_EXTRACT_UTC (SYSTIMESTAMP) + numToDSInterval(:TIMEOUT, 'second' )) AND (QUEUE IN :QUEUES) AND ROWNUM = 1
 ",
@@ -61,7 +61,7 @@ UPDATE MISP.HF_JOB_QUEUE
                                     .QuerySingle<FetchedJob>(
                                         @"
  SELECT ID as Id, JOB_ID as JobId, QUEUE as Queue
-   FROM MISP.HF_JOB_QUEUE
+   FROM HF_JOB_QUEUE
   WHERE FETCH_TOKEN = :FETCH_TOKEN
 ",
                                         new
@@ -93,7 +93,7 @@ UPDATE MISP.HF_JOB_QUEUE
         public void Enqueue(IDbConnection connection, string queue, string jobId)
         {
             Logger.TraceFormat("Enqueue JobId={0} Queue={1}", jobId, queue);
-            connection.Execute("INSERT INTO MISP.HF_JOB_QUEUE (ID, JOB_ID, QUEUE) VALUES (MISP.HF_SEQUENCE.NEXTVAL, :JOB_ID, :QUEUE)", new { JOB_ID = jobId, QUEUE = queue });
+            connection.Execute("INSERT INTO HF_JOB_QUEUE (ID, JOB_ID, QUEUE) VALUES (HF_SEQUENCE.NEXTVAL, :JOB_ID, :QUEUE)", new { JOB_ID = jobId, QUEUE = queue });
         }
     }
 }
