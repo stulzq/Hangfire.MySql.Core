@@ -126,8 +126,8 @@ namespace Hangfire.Oracle.Core
                 connection.Execute(
                     @" 
  MERGE INTO MISP.HF_JOB_PARAMETER JP
-      USING (SELECT * FROM MISP.HF_JOB_PARAMETER) SRC
-         ON (JP.ID = SRC.ID)
+      USING (SELECT 1 FROM DUAL) SRC
+         ON (JP.ID = :ID)
  WHEN MATCHED THEN
       UPDATE SET VALUE = :VALUE
  WHEN NOT MATCHED THEN
@@ -392,7 +392,7 @@ SELECT VALUE as Value
                     connection.QuerySingleOrDefault<string>(
                         @"
 SELECT *
-  FROM (  SELECT VALUE AS VALUE
+  FROM (  SELECT VALUE AS Value
             FROM MISP.HF_SET
            WHERE KEY = :KEY AND SCORE BETWEEN :F AND :T
         ORDER BY SCORE)
@@ -541,11 +541,7 @@ SELECT VALUE as Value
 
             return _storage.UseConnection(connection =>
             {
-                var result =
-                    connection
-                        .QuerySingle<DateTime?>(
-                            "SELECT MIN(EXPIRE_AT) FROM MISP.HF_SET WHERE KEY = :KEY",
-                            new { KEY = key });
+                var result = connection.QuerySingle<DateTime?>("SELECT MIN(EXPIRE_AT) FROM MISP.HF_SET WHERE KEY = :KEY", new { KEY = key });
 
                 if (!result.HasValue)
                 {
@@ -575,8 +571,8 @@ SELECT VALUE as Value
                     connection.Execute(
                         @"
  MERGE INTO MISP.HF_HASH H
-      USING (SELECT * FROM MISP.HF_HASH) SRC
-         ON (H.KEY = SRC.KEY AND H.FIELD = SRC.FIELD)
+      USING (SELECT 1 FROM DUAL) SRC
+         ON (H.KEY = :KEY AND H.FIELD = :FIELD)
  WHEN MATCHED THEN
      UPDATE SET VALUE = :VALUE
  WHEN NOT MATCHED THEN

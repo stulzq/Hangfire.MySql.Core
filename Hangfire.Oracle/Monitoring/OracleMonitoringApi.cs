@@ -183,7 +183,7 @@ END;
                         Servers = connection.ExecuteScalar<int>("SELECT COUNT(ID) FROM MISP.HF_SERVER"),
                         Succeeded = connection.ExecuteScalar<int>(succeededQuery, new { KEY = "stats:succeeded" }),
                         Deleted = connection.ExecuteScalar<int>(succeededQuery, new { KEY = "stats:deleted" }),
-                        Recurring = connection.ExecuteScalar<int>("SELECT COUNT(*) FROM MISP.HF_SET where KEY = 'recurring-jobs'")
+                        Recurring = connection.ExecuteScalar<int>("SELECT COUNT(*) FROM MISP.HF_SET WHERE KEY = 'recurring-jobs'")
                     });
 
             statistics.Queues = _storage.QueueProviders

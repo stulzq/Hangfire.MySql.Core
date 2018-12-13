@@ -165,8 +165,8 @@ END;
             QueueCommand(x => x.Execute(
                 @"
  MERGE INTO MISP.HF_SET H
-      USING (SELECT * FROM MISP.HF_SET) SRC
-         ON (H.KEY = SRC.KEY AND H.VALUE = SRC.VALUE)
+      USING (SELECT 1 FROM DUAL) SRC
+         ON (H.KEY = :KEY AND H.VALUE = :VALUE)
  WHEN MATCHED THEN
       UPDATE SET SCORE = :SCORE
  WHEN NOT MATCHED THEN
@@ -285,9 +285,7 @@ where lst.Key = @key
             if (key == null) throw new ArgumentNullException(nameof(key));
 
             AcquireSetLock();
-            QueueCommand(x =>
-                x.Execute(
-                    "UPDATE MISP.HF_SET SET EXPIRE_AT = NULL WHERE KEY = :KEY", new { KEY = key }));
+            QueueCommand(x => x.Execute("UPDATE MISP.HF_SET SET EXPIRE_AT = NULL WHERE KEY = :KEY", new { KEY = key }));
         }
 
         public override void RemoveSet(string key)
@@ -297,9 +295,7 @@ where lst.Key = @key
             if (key == null) throw new ArgumentNullException(nameof(key));
 
             AcquireSetLock();
-            QueueCommand(x =>
-                x.Execute(
-                    "DELETE FROM MISP.HF_SET WHERE KEY = :KEY", new { KEY = key }));
+            QueueCommand(x => x.Execute("DELETE FROM MISP.HF_SET WHERE KEY = :KEY", new { KEY = key }));
         }
 
         public override void PersistList(string key)
@@ -333,8 +329,8 @@ where lst.Key = @key
                 x.Execute(
                     @"
  MERGE INTO MISP.HF_HASH H
-      USING (SELECT * FROM MISP.HF_HASH) SRC
-         ON (H.KEY = SRC.KEY AND H.FIELD = SRC.FIELD)
+      USING (SELECT 1 FROM DUAL) SRC
+         ON (H.KEY = :KEY AND H.FIELD = :FIELD)
  WHEN MATCHED THEN
       UPDATE SET VALUE = :VALUE
  WHEN NOT MATCHED THEN
