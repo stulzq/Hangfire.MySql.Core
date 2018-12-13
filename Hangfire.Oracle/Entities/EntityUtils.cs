@@ -10,5 +10,10 @@ namespace Hangfire.Oracle.Core.Entities
         {
             return connection.QuerySingle<long>("SELECT MISP.HF_SEQUENCE.NEXTVAL FROM dual");
         }
+
+        public static long GetNextJobId(this IDbConnection connection)
+        {
+            return connection.QuerySingle<long>("SELECT MISP.HF_JOB_ID_SEQ.NEXTVAL FROM dual");
+        }
     }
 }

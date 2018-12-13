@@ -146,14 +146,13 @@ namespace Hangfire.Oracle.Core
             }, null);
         }
 
-        internal T UseTransaction<T>(
-           [InstantHandle] Func<IDbConnection, T> func, IsolationLevel? isolationLevel)
+        internal T UseTransaction<T>([InstantHandle] Func<IDbConnection, T> func, IsolationLevel? isolationLevel)
         {
             return UseConnection(connection =>
             {
                 using (var transaction = connection.BeginTransaction(isolationLevel ?? _options.TransactionIsolationLevel ?? IsolationLevel.ReadCommitted))
                 {
-                    T result = func(connection);
+                    var result = func(connection);
                     transaction.Commit();
 
                     return result;

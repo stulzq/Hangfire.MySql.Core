@@ -51,7 +51,7 @@ namespace Hangfire.Oracle.Core
 
             return _storage.UseConnection(connection =>
             {
-                var jobId = connection.GetNextId();
+                var jobId = connection.GetNextJobId();
                 connection.Execute(
                     @" 
  INSERT INTO MISP.HF_JOB (ID, INVOCATION_DATA, ARGUMENTS, CREATED_AT, EXPIRE_AT) 
