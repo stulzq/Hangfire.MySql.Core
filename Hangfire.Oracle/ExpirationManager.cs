@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Data.Common;
 using System.Threading;
 
@@ -9,7 +10,9 @@ using Hangfire.Server;
 
 namespace Hangfire.Oracle.Core
 {
+#pragma warning disable 618
     internal class ExpirationManager : IServerComponent
+#pragma warning restore 618
     {
         private static readonly ILog Logger = LogProvider.GetLogger(typeof(ExpirationManager));
 
@@ -18,13 +21,17 @@ namespace Hangfire.Oracle.Core
         private static readonly TimeSpan DelayBetweenPasses = TimeSpan.FromSeconds(1);
         private const int NumberOfRecordsInSinglePass = 1000;
 
-        private static readonly string[] ProcessedTables =
+        private static readonly List<Tuple<string, bool>> TablesToProcess = new List<Tuple<string, bool>>
         {
-            "HF_AGGREGATED_COUNTER",
-            "HF_JOB",
-            "HF_LIST",
-            "HF_SET",
-            "HF_HASH",
+            // This list must be sorted in dependency order 
+            new Tuple<string, bool>("HF_JOB_PARAMETER", true),
+            new Tuple<string, bool>("HF_JOB_QUEUE", true),
+            new Tuple<string, bool>("HF_JOB_STATE", true),
+            new Tuple<string, bool>("HF_AGGREGATED_COUNTER", false),
+            new Tuple<string, bool>("HF_LIST", false),
+            new Tuple<string, bool>("HF_SET", false),
+            new Tuple<string, bool>("HF_HASH", false),
+            new Tuple<string, bool>("HF_JOB", false)
         };
 
         private readonly OracleStorage _storage;
@@ -43,9 +50,9 @@ namespace Hangfire.Oracle.Core
 
         public void Execute(CancellationToken cancellationToken)
         {
-            foreach (var table in ProcessedTables)
+            foreach (var tuple in TablesToProcess)
             {
-                Logger.DebugFormat("Removing outdated records from table '{0}'...", table);
+                Logger.DebugFormat("Removing outdated records from table '{0}'...", tuple.Item1);
 
                 var removedCount = 0;
 
@@ -55,18 +62,16 @@ namespace Hangfire.Oracle.Core
                     {
                         try
                         {
-                            Logger.DebugFormat("DELETE FROM `{0}` WHERE EXPIRE_AT < :NOW AND ROWNUM <= :COUNT", table);
+                            Logger.DebugFormat("Deleting records from table: {0}", tuple.Item1);
 
-                            using (
-                                new OracleDistributedLock(
-                                    connection,
-                                    DistributedLockKey,
-                                    DefaultLockTimeout,
-                                    cancellationToken).Acquire())
+                            using (new OracleDistributedLock(connection, DistributedLockKey, DefaultLockTimeout, cancellationToken).Acquire())
                             {
-                                removedCount = connection.Execute(
-                                    $"DELETE FROM {table} WHERE EXPIRE_AT < :NOW AND ROWNUM <= :COUNT",
-                                    new { NOW = DateTime.UtcNow, COUNT = NumberOfRecordsInSinglePass });
+                                var query = $"DELETE FROM {tuple.Item1} WHERE EXPIRE_AT < :NOW AND ROWNUM <= :COUNT";
+                                if (tuple.Item2)
+                                {
+                                    query = $"DELETE FROM {tuple.Item1} WHERE JOB_ID IN (SELECT ID FROM HF_JOB WHERE EXPIRE_AT < :NOW AND ROWNUM <= :COUNT)";
+                                }
+                                removedCount = connection.Execute(query, new { NOW = DateTime.UtcNow, COUNT = NumberOfRecordsInSinglePass });
                             }
 
                             Logger.DebugFormat("removed records count={0}", removedCount);
@@ -79,7 +84,7 @@ namespace Hangfire.Oracle.Core
 
                     if (removedCount > 0)
                     {
-                        Logger.Trace($"Removed {removedCount} outdated record(s) from '{table}' table.");
+                        Logger.Trace($"Removed {removedCount} outdated record(s) from '{tuple.Item1}' table.");
 
                         cancellationToken.WaitHandle.WaitOne(DelayBetweenPasses);
                         cancellationToken.ThrowIfCancellationRequested();
