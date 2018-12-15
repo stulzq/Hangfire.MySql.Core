@@ -21,8 +21,9 @@ namespace Hangfire.Oracle.Core
     {
         private static readonly ILog Logger = LogProvider.GetLogger(typeof(OracleStorage));
 
+        private string _string;
         private readonly string _connectionString;
-        private readonly IDbConnection _existingConnection;
+        private readonly Func<IDbConnection> _connectionFactory;
         private readonly OracleStorageOptions _options;
 
         public virtual PersistentJobQueueProviderCollection QueueProviders { get; private set; }
@@ -49,7 +50,7 @@ namespace Hangfire.Oracle.Core
             {
                 throw new ArgumentException($"Could not find connection string with name '{connectionString}' in application config file");
             }
-            
+
             if (options.PrepareSchemaIfNecessary)
             {
                 using (var connection = CreateAndOpenConnection())
@@ -61,10 +62,10 @@ namespace Hangfire.Oracle.Core
             InitializeQueueProviders();
         }
 
-        internal OracleStorage(IDbConnection existingConnection)
+        public OracleStorage(Func<IDbConnection> connectionFactory, OracleStorageOptions options)
         {
-            _existingConnection = existingConnection ?? throw new ArgumentNullException(nameof(existingConnection));
-            _options = new OracleStorageOptions();
+            _connectionFactory = connectionFactory ?? throw new ArgumentNullException(nameof(connectionFactory));
+            _options = options;
 
             InitializeQueueProviders();
         }
@@ -74,7 +75,9 @@ namespace Hangfire.Oracle.Core
             QueueProviders = new PersistentJobQueueProviderCollection(new OracleJobQueueProvider(this, _options));
         }
 
+#pragma warning disable 618
         public override IEnumerable<IServerComponent> GetComponents()
+#pragma warning restore 618
         {
             yield return new ExpirationManager(this, _options.JobExpirationCheckInterval);
             yield return new CountersAggregator(this, _options.CountersAggregateInterval);
@@ -88,11 +91,30 @@ namespace Hangfire.Oracle.Core
 
         public override string ToString()
         {
-            const string canNotParseMessage = "<Connection string can not be parsed>";
+            if (!string.IsNullOrWhiteSpace(_string))
+            {
+                return _string;
+            }
+
+            var connectionString = _connectionString;
+
+            if (string.IsNullOrWhiteSpace(connectionString))
+            {
+                using (var connection = CreateAndOpenConnection())
+                {
+                    connectionString = connection.ConnectionString;
+                }
+            }
+
+            if (string.IsNullOrWhiteSpace(connectionString))
+            {
+                _string = "Hangfire.Oracle.Core";
+                return _string;
+            }
 
             try
             {
-                var parts = _connectionString.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries)
+                var parts = connectionString.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries)
                     .Select(x => x.Split(new[] { '=' }, StringSplitOptions.RemoveEmptyEntries))
                     .Select(x => new { Key = x[0].Trim(), Value = x.Length > 1 ? x[1].Trim() : "" })
                     .ToDictionary(x => x.Key, x => x.Value, StringComparer.OrdinalIgnoreCase);
@@ -108,19 +130,14 @@ namespace Hangfire.Oracle.Core
                     }
                 }
 
-                if (builder.Length != 0)
-                {
-                    builder.Append("@");
-                }
-
-                return builder.Length != 0
-                    ? $"Hangfire.Oracle.Core: {builder}"
-                    : canNotParseMessage;
+                _string = $"Hangfire.Oracle.Core: {builder}";
+                return _string;
             }
             catch (Exception ex)
             {
                 Logger.ErrorException(ex.Message, ex);
-                return canNotParseMessage;
+                _string = "<Connection string can not be parsed>";
+                return _string;
             }
         }
 
@@ -188,17 +205,16 @@ namespace Hangfire.Oracle.Core
 
         internal IDbConnection CreateAndOpenConnection()
         {
-            if (_existingConnection != null)
-            {
-                return _existingConnection;
-            }
+            var connection = _connectionFactory != null ? _connectionFactory() : new OracleConnection(_connectionString);
 
-            var connection = new OracleConnection(_connectionString);
-            connection.Open();
-
-            if (!string.IsNullOrWhiteSpace(_options.SchemaName))
+            if (connection.State == ConnectionState.Closed)
             {
-                connection.Execute($"ALTER SESSION SET CURRENT_SCHEMA={_options.SchemaName}");
+                connection.Open();
+
+                if (!string.IsNullOrWhiteSpace(_options.SchemaName))
+                {
+                    connection.Execute($"ALTER SESSION SET CURRENT_SCHEMA={_options.SchemaName}");
+                }
             }
 
             return connection;
@@ -206,10 +222,7 @@ namespace Hangfire.Oracle.Core
 
         internal void ReleaseConnection(IDbConnection connection)
         {
-            if (connection != null && !ReferenceEquals(connection, _existingConnection))
-            {
-                connection.Dispose();
-            }
+            connection?.Dispose();
         }
         public void Dispose()
         {
