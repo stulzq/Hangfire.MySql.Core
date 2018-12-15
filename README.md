@@ -44,6 +44,16 @@ GlobalConfiguration.Configuration.UseStorage(
             SchemaName = "HANGFIRE"
         }));
 ```
+- With version 1.1 you can provide your own connection factory.
+```
+GlobalConfiguration.Configuration.UseStorage(
+    new OracleStorage(
+        () => new OracleConnection(connectionString), 
+        new OracleStorageOptions
+        {
+            SchemaName = "HANGFIRE"
+        }));
+```
 Description of optional parameters:
 - `TransactionIsolationLevel` - transaction isolation level. Default is read committed. Didn't test with other options!
 - `QueuePollInterval` - job queue polling interval. Default is 15 seconds.
