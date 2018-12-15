@@ -8,7 +8,9 @@ using Hangfire.Server;
 
 namespace Hangfire.Oracle.Core
 {
+#pragma warning disable 618
     internal class CountersAggregator : IServerComponent
+#pragma warning restore 618
     {
         private static readonly ILog Logger = LogProvider.GetLogger(typeof(CountersAggregator));
 
@@ -35,7 +37,6 @@ namespace Hangfire.Oracle.Core
                 _storage.UseConnection(connection =>
                 {
                     removedCount = connection.Execute(GetMergeQuery(), new { COUNT = NumberOfRecordsInSinglePass });
-                    //removedCount = connection.Execute(GetDeleteQuery(), new { COUNT = NumberOfRecordsInSinglePass });
                 });
 
                 if (removedCount >= NumberOfRecordsInSinglePass)
@@ -81,14 +82,6 @@ BEGIN
    DELETE FROM HF_COUNTER
     WHERE ROWNUM <= :COUNT;
 END;
-";
-        }
-
-        private static string GetDeleteQuery()
-        {
-            return @"
- DELETE FROM HF_COUNTER
-  WHERE ROWNUM <= :COUNT
 ";
         }
     }
