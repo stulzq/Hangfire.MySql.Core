@@ -1,13 +1,12 @@
 ﻿using System;
 using System.Data;
+using System.Data.Common;
 using System.Threading;
 
 using Dapper;
 
 using Hangfire.Logging;
 using Hangfire.Storage;
-
-using Oracle.ManagedDataAccess.Client;
 
 namespace Hangfire.Oracle.Core.JobQueue
 {
@@ -71,7 +70,7 @@ UPDATE HF_JOB_QUEUE
                         }
                     }
                 }
-                catch (OracleException ex)
+                catch (DbException ex)
                 {
                     Logger.ErrorException(ex.Message, ex);
                     _storage.ReleaseConnection(connection);

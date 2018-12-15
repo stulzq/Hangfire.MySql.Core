@@ -1,12 +1,11 @@
 ﻿using System;
+using System.Data.Common;
 using System.Threading;
 
 using Dapper;
 
 using Hangfire.Logging;
 using Hangfire.Server;
-
-using Oracle.ManagedDataAccess.Client;
 
 namespace Hangfire.Oracle.Core
 {
@@ -72,7 +71,7 @@ namespace Hangfire.Oracle.Core
 
                             Logger.DebugFormat("removed records count={0}", removedCount);
                         }
-                        catch (OracleException ex)
+                        catch (DbException ex)
                         {
                             Logger.Error(ex.ToString());
                         }

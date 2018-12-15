@@ -86,9 +86,7 @@ namespace Hangfire.Oracle.Core.Monitoring
         {
             return UseConnection(connection =>
             {
-                const string sql = @"
-BEGIN
-   OPEN :rslt1 FOR
+                const string jobQuery = @"
     SELECT ID              AS Id
           ,STATE_ID        AS StateId
           ,STATE_NAME      AS StateName
@@ -97,17 +95,26 @@ BEGIN
           ,CREATED_AT      AS CreatedAt
           ,EXPIRE_AT       AS ExpireAt
       FROM HF_JOB
-     WHERE ID = :ID;
+     WHERE ID = :ID
+";
+                var sqlJob = connection.QuerySingleOrDefault<SqlJob>(jobQuery, new { ID = jobId });
+                if (sqlJob == null)
+                {
+                    return null;
+                }
 
-   OPEN :rslt2 FOR
+                const string jobParametersQuery = @"
     SELECT ID     AS Id
           ,NAME   AS Name
           ,VALUE  AS Value
           ,JOB_ID AS JobId
       FROM HF_JOB_PARAMETER
-     WHERE JOB_ID = :ID;
+     WHERE JOB_ID = :ID
+";
 
-    OPEN :rslt3 FOR
+                var jobParameters = connection.Query<JobParameter>(jobParametersQuery, new { ID = jobId }).ToDictionary(x => x.Name, parameter => parameter.Value);
+
+                const string jobStatesQuery = @"
      SELECT ID       AS Id
            ,JOB_ID   AS JobId
            ,NAME     AS Name
@@ -116,45 +123,25 @@ BEGIN
            ,DATA     AS Data
        FROM HF_JOB_STATE
       WHERE JOB_ID = :ID
-   ORDER BY ID DESC;
-END;
+   ORDER BY ID DESC
 ";
-                var dynParams = new OracleDynamicParameters();
-                dynParams.Add(":rslt1", OracleDbType.RefCursor, ParameterDirection.Output);
-                dynParams.Add(":rslt2", OracleDbType.RefCursor, ParameterDirection.Output);
-                dynParams.Add(":rslt3", OracleDbType.RefCursor, ParameterDirection.Output);
-                dynParams.Add(":ID", OracleDbType.NVarchar2, ParameterDirection.Input, jobId);
 
-                using (var multi = connection.QueryMultiple(sql, dynParams))
+                var jobStates = connection.Query<SqlState>(jobStatesQuery, new { ID = jobId }).Select(x => new StateHistoryDto
                 {
-                    var job = multi.ReadSingleOrDefault<SqlJob>();
-                    if (job == null)
-                    {
-                        return null;
-                    }
+                    StateName = x.Name,
+                    CreatedAt = x.CreatedAt,
+                    Reason = x.Reason,
+                    Data = new Dictionary<string, string>(JobHelper.FromJson<Dictionary<string, string>>(x.Data), StringComparer.OrdinalIgnoreCase),
+                }).ToList();
 
-                    var parameters = multi.Read<JobParameter>().ToDictionary(x => x.Name, x => x.Value);
-                    var history =
-                        multi.Read<SqlState>()
-                            .ToList()
-                            .Select(x => new StateHistoryDto
-                            {
-                                StateName = x.Name,
-                                CreatedAt = x.CreatedAt,
-                                Reason = x.Reason,
-                                Data = new Dictionary<string, string>(JobHelper.FromJson<Dictionary<string, string>>(x.Data), StringComparer.OrdinalIgnoreCase),
-                            })
-                            .ToList();
-
-                    return new JobDetailsDto
-                    {
-                        CreatedAt = job.CreatedAt,
-                        ExpireAt = job.ExpireAt,
-                        Job = DeserializeJob(job.InvocationData, job.Arguments),
-                        History = history,
-                        Properties = parameters
-                    };
-                }
+                return new JobDetailsDto
+                {
+                    CreatedAt = sqlJob.CreatedAt,
+                    ExpireAt = sqlJob.ExpireAt,
+                    Job = DeserializeJob(sqlJob.InvocationData, sqlJob.Arguments),
+                    History = jobStates,
+                    Properties = jobParameters
+                };
             });
         }
 
