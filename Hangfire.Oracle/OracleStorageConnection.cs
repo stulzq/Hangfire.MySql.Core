@@ -127,7 +127,7 @@ namespace Hangfire.Oracle.Core
                     @" 
  MERGE INTO HF_JOB_PARAMETER JP
       USING (SELECT 1 FROM DUAL) SRC
-         ON (JP.ID = :ID)
+         ON (JP.NAME = :NAME AND JP.JOB_ID = :JOB_ID)
  WHEN MATCHED THEN
       UPDATE SET VALUE = :VALUE
  WHEN NOT MATCHED THEN
