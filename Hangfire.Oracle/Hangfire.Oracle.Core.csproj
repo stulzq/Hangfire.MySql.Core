@@ -13,11 +13,11 @@
     <PackageProjectUrl>https://github.com/akoylu/Hangfire.Oracle.Core</PackageProjectUrl>
     <Copyright>Copyright 2018</Copyright>
     <PackageTags>Hangfire Oracle Hangfire.Oracle Hangfire.Oracle.Core</PackageTags>
-    <Version>1.1.1</Version>
-    <AssemblyVersion>1.1.1.0</AssemblyVersion>
+    <Version>1.1.2</Version>
+    <AssemblyVersion>1.1.2.0</AssemblyVersion>
     <AssemblyName>Hangfire.Oracle.Core</AssemblyName>
     <RootNamespace>Hangfire.Oracle.Core</RootNamespace>
-    <PackageReleaseNotes>Fixed an issue where expiration has dependents</PackageReleaseNotes>
+    <PackageReleaseNotes>Fixed CLOB insertions</PackageReleaseNotes>
   </PropertyGroup>
   <ItemGroup>
     <None Remove="Install.sql" />
