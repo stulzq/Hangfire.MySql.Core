@@ -1,15 +1,18 @@
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using System.Threading;
 
 using Dapper;
-
+using Dapper.Oracle;
 using Hangfire.Common;
 using Hangfire.Logging;
 using Hangfire.Oracle.Core.Entities;
 using Hangfire.Server;
 using Hangfire.Storage;
+using Oracle.ManagedDataAccess.Client;
+using Oracle.ManagedDataAccess.Types;
 
 namespace Hangfire.Oracle.Core
 {
@@ -46,25 +49,31 @@ namespace Hangfire.Oracle.Core
             }
 
             var invocationData = InvocationData.Serialize(job);
+            invocationData.Arguments = null;
+            var arguments = InvocationData.Serialize(job);
 
             Logger.TraceFormat("CreateExpiredJob={0}", JobHelper.ToJson(invocationData));
 
             return _storage.UseConnection(connection =>
             {
                 var jobId = connection.GetNextJobId();
+
+                var oracleDynamicParameters = new OracleDynamicParameters();
+                oracleDynamicParameters.AddDynamicParams(new
+                {
+                    ID = jobId,
+                    CREATED_AT = createdAt,
+                    EXPIRE_AT = createdAt.Add(expireIn)
+                });
+                oracleDynamicParameters.Add("INVOCATION_DATA", JobHelper.ToJson(invocationData), OracleMappingType.NClob, ParameterDirection.Input);
+                oracleDynamicParameters.Add("ARGUMENTS", arguments.Arguments, OracleMappingType.NClob, ParameterDirection.Input);
+
                 connection.Execute(
                     @" 
  INSERT INTO HF_JOB (ID, INVOCATION_DATA, ARGUMENTS, CREATED_AT, EXPIRE_AT) 
       VALUES (:ID, :INVOCATION_DATA, :ARGUMENTS, :CREATED_AT, :EXPIRE_AT)
 ",
-                    new
-                    {
-                        ID = jobId,
-                        INVOCATION_DATA = JobHelper.ToJson(invocationData),
-                        ARGUMENTS = invocationData.Arguments,
-                        CREATED_AT = createdAt,
-                        EXPIRE_AT = createdAt.Add(expireIn)
-                    });
+                    oracleDynamicParameters);
 
                 if (parameters.Count > 0)
                 {
@@ -72,12 +81,15 @@ namespace Hangfire.Oracle.Core
                     var parameterIndex = 0;
                     foreach (var parameter in parameters)
                     {
-                        parameterArray[parameterIndex++] = new
+                        var dynamicParameters = new OracleDynamicParameters();
+                        dynamicParameters.AddDynamicParams(new
                         {
                             JOB_ID = jobId,
-                            NAME = parameter.Key,
-                            VALUE = parameter.Value
-                        };
+                            NAME = parameter.Key
+                        });
+                        dynamicParameters.Add("VALUE", parameter.Value, OracleMappingType.NClob, ParameterDirection.Input);
+
+                        parameterArray[parameterIndex++] = dynamicParameters;
                     }
 
                     connection.Execute(@"INSERT INTO HF_JOB_PARAMETER (ID, NAME, VALUE, JOB_ID) VALUES (HF_SEQUENCE.NEXTVAL, :NAME, :VALUE, :JOB_ID)", parameterArray);
@@ -123,6 +135,9 @@ namespace Hangfire.Oracle.Core
 
             _storage.UseConnection(connection =>
             {
+                var oracleDynamicParameters = new OracleDynamicParameters();
+                oracleDynamicParameters.AddDynamicParams(new { JOB_ID = id, NAME = name });
+                oracleDynamicParameters.Add("VALUE", value, OracleMappingType.NClob, ParameterDirection.Input);
                 connection.Execute(
                     @" 
  MERGE INTO HF_JOB_PARAMETER JP
@@ -134,7 +149,7 @@ namespace Hangfire.Oracle.Core
       INSERT (ID, JOB_ID, NAME, VALUE)
       VALUES (HF_SEQUENCE.NEXTVAL, :JOB_ID, :NAME, :VALUE)
 ",
-                    new { JOB_ID = id, NAME = name, VALUE = value });
+                    oracleDynamicParameters);
             });
         }
 
@@ -568,6 +583,10 @@ SELECT VALUE as Value
             {
                 foreach (var keyValuePair in keyValuePairs)
                 {
+                    var oracleDynamicParameters = new OracleDynamicParameters();
+                    oracleDynamicParameters.AddDynamicParams(new { KEY = key, FIELD = keyValuePair.Key });
+                    oracleDynamicParameters.Add("VALUE", keyValuePair.Value, OracleMappingType.NClob, ParameterDirection.Input);
+
                     connection.Execute(
                         @"
  MERGE INTO HF_HASH H
@@ -579,7 +598,7 @@ SELECT VALUE as Value
      INSERT (ID, KEY, FIELD, VALUE)
      VALUES (HF_SEQUENCE.NEXTVAL, :KEY, :FIELD, :VALUE)
 ",
-                        new { KEY = key, FIELD = keyValuePair.Key, VALUE = keyValuePair.Value });
+                        oracleDynamicParameters);
                 }
             });
         }
