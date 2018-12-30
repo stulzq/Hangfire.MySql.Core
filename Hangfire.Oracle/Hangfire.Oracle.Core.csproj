@@ -13,11 +13,11 @@
     <PackageProjectUrl>https://github.com/akoylu/Hangfire.Oracle.Core</PackageProjectUrl>
     <Copyright>Copyright 2018</Copyright>
     <PackageTags>Hangfire Oracle Hangfire.Oracle Hangfire.Oracle.Core</PackageTags>
-    <Version>1.1.2</Version>
-    <AssemblyVersion>1.1.2.0</AssemblyVersion>
+    <Version>1.2.0</Version>
+    <AssemblyVersion>1.2.0.0</AssemblyVersion>
     <AssemblyName>Hangfire.Oracle.Core</AssemblyName>
     <RootNamespace>Hangfire.Oracle.Core</RootNamespace>
-    <PackageReleaseNotes>Fixed CLOB insertions</PackageReleaseNotes>
+    <PackageReleaseNotes>PackageReferences are updated</PackageReleaseNotes>
   </PropertyGroup>
   <ItemGroup>
     <None Remove="Install.sql" />
@@ -27,11 +27,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Dapper.Oracle" Version="1.0.2" />
+    <PackageReference Include="Dapper.Oracle" Version="1.0.3" />
     <PackageReference Include="Microsoft.CSharp" Version="4.5.0" />
     <PackageReference Include="Newtonsoft.Json" Version="11.0.2" />
     <PackageReference Include="Dapper" Version="1.50.5" />
-    <PackageReference Include="Hangfire.Core" Version="1.6.20" />
-    <PackageReference Include="Oracle.ManagedDataAccess.Core" Version="2.12.0-beta3" />
+    <PackageReference Include="Hangfire.Core" Version="1.6.21" />
+    <PackageReference Include="Oracle.ManagedDataAccess.Core" Version="2.18.3" />
   </ItemGroup>
 </Project>
