@@ -42,6 +42,7 @@ GlobalConfiguration.Configuration.UseStorage(
             PrepareSchemaIfNecessary = true,
             DashboardJobListLimit = 50000,
             TransactionTimeout = TimeSpan.FromMinutes(1),
+            TablePrefix = "Hangfire"
         }));
 ```
 Description of optional parameters:

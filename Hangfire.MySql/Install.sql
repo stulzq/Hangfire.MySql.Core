@@ -7,10 +7,9 @@ CREATE TABLE `<tableprefix>_Job` (
   `StateName` varchar(20) DEFAULT NULL,
   `InvocationData` longtext NOT NULL,
   `Arguments` longtext NOT NULL,
-  `CreatedAt` datetime(6) NOT NULL,
-  `ExpireAt` datetime(6) DEFAULT NULL,
-  PRIMARY KEY (`Id`),
-  KEY `IX_Job_StateName` (`StateName`)
+  `CreatedAt` datetime NOT NULL,
+  `ExpireAt` datetime DEFAULT NULL,
+  PRIMARY KEY (`Id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 
@@ -22,8 +21,7 @@ CREATE TABLE `<tableprefix>_Counter` (
   `Key` varchar(100) NOT NULL,
   `Value` int(11) NOT NULL,
   `ExpireAt` datetime DEFAULT NULL,
-  PRIMARY KEY (`Id`),
-  KEY `IX_Counter_Key` (`Key`)
+  PRIMARY KEY (`Id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 
@@ -32,8 +30,7 @@ CREATE TABLE `<tableprefix>_AggregatedCounter` (
 	`Key` varchar(100) NOT NULL,
 	`Value` int(11) NOT NULL,
 	ExpireAt datetime DEFAULT NULL,
-	PRIMARY KEY (`Id`),
-	UNIQUE KEY `IX_CounterAggregated_Key` (`Key`)
+	PRIMARY KEY (`Id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 
@@ -42,7 +39,7 @@ CREATE TABLE `<tableprefix>_AggregatedCounter` (
 -- ----------------------------
 CREATE TABLE `<tableprefix>_DistributedLock` (
   `Resource` varchar(100) NOT NULL,
-  `CreatedAt` datetime(6) NOT NULL
+  `CreatedAt` datetime NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 
@@ -54,9 +51,8 @@ CREATE TABLE `<tableprefix>_Hash` (
   `Key` varchar(100) NOT NULL,
   `Field` varchar(40) NOT NULL,
   `Value` longtext,
-  `ExpireAt` datetime(6) DEFAULT NULL,
-  PRIMARY KEY (`Id`),
-  UNIQUE KEY `IX_Hash_Key_Field` (`Key`,`Field`)
+  `ExpireAt` datetime DEFAULT NULL,
+  PRIMARY KEY (`Id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 
@@ -69,10 +65,7 @@ CREATE TABLE `<tableprefix>_JobParameter` (
   `Name` varchar(40) NOT NULL,
   `Value` longtext,
 
-  PRIMARY KEY (`Id`),
-  CONSTRAINT `IX_JobParameter_JobId_Name` UNIQUE (`JobId`,`Name`),
-  KEY `FK_JobParameter_Job` (`JobId`),
-  CONSTRAINT `FK_JobParameter_Job` FOREIGN KEY (`JobId`) REFERENCES `Job` (`Id`) ON DELETE CASCADE ON UPDATE CASCADE
+  PRIMARY KEY (`Id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ----------------------------
@@ -82,7 +75,7 @@ CREATE TABLE `<tableprefix>_JobQueue` (
   `Id` int(11) NOT NULL AUTO_INCREMENT,
   `JobId` int(11) NOT NULL,
   `Queue` varchar(50) NOT NULL,
-  `FetchedAt` datetime(6) DEFAULT NULL,
+  `FetchedAt` datetime DEFAULT NULL,
   `FetchToken` varchar(36) DEFAULT NULL,
   
   PRIMARY KEY (`Id`),
@@ -97,11 +90,9 @@ CREATE TABLE `<tableprefix>_JobState` (
   `JobId` int(11) NOT NULL,
   `Name` varchar(20) NOT NULL,
   `Reason` varchar(100) DEFAULT NULL,
-  `CreatedAt` datetime(6) NOT NULL,
+  `CreatedAt` datetime NOT NULL,
   `Data` longtext,
-  PRIMARY KEY (`Id`),
-  KEY `FK_JobState_Job` (`JobId`),
-  CONSTRAINT `FK_JobState_Job` FOREIGN KEY (`JobId`) REFERENCES `Job` (`Id`) ON DELETE CASCADE ON UPDATE CASCADE
+  PRIMARY KEY (`Id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ----------------------------
@@ -110,7 +101,7 @@ CREATE TABLE `<tableprefix>_JobState` (
 CREATE TABLE `<tableprefix>_Server` (
   `Id` varchar(100) NOT NULL,
   `Data` longtext NOT NULL,
-  `LastHeartbeat` datetime(6) DEFAULT NULL,
+  `LastHeartbeat` datetime DEFAULT NULL,
   PRIMARY KEY (`Id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -124,8 +115,7 @@ CREATE TABLE `<tableprefix>_Set` (
   `Value` varchar(256) NOT NULL,
   `Score` float NOT NULL,
   `ExpireAt` datetime DEFAULT NULL,
-  PRIMARY KEY (`Id`),
-  UNIQUE KEY `IX_Set_Key_Value` (`Key`,`Value`)
+  PRIMARY KEY (`Id`)
 ) ENGINE=InnoDB  CHARSET=utf8mb4;
 
 
@@ -136,11 +126,9 @@ CREATE TABLE `<tableprefix>_State`
 	JobId int(11) NOT NULL,
 	Name varchar(20) NOT NULL,
 	Reason varchar(100) NULL,
-	CreatedAt datetime(6) NOT NULL,
+	CreatedAt datetime NOT NULL,
 	Data longtext NULL,
-	PRIMARY KEY (`Id`),
-	KEY `FK_HangFire_State_Job` (`JobId`),
-	CONSTRAINT `FK_HangFire_State_Job` FOREIGN KEY (`JobId`) REFERENCES `Job` (`Id`) ON DELETE CASCADE ON UPDATE CASCADE
+	PRIMARY KEY (`Id`)
 ) ENGINE=InnoDB  CHARSET=utf8mb4;
 
 CREATE TABLE `<tableprefix>_List`
@@ -148,6 +136,6 @@ CREATE TABLE `<tableprefix>_List`
 	`Id` int(11) NOT NULL AUTO_INCREMENT,
 	`Key` varchar(100) NOT NULL,
 	`Value` longtext NULL,
-	`ExpireAt` datetime(6) NULL,
+	`ExpireAt` datetime NULL,
 	PRIMARY KEY (`Id`)
 ) ENGINE=InnoDB  CHARSET=utf8mb4;

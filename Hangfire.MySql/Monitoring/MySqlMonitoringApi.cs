@@ -142,7 +142,7 @@ select sum(s.`Value`) from (
                         Failed = connection.ExecuteScalar<int>(jobQuery, new {stateName = "Failed"}),
                         Processing = connection.ExecuteScalar<int>(jobQuery, new {stateName = "Processing"}),
                         Scheduled = connection.ExecuteScalar<int>(jobQuery, new {stateName = "Scheduled"}),
-                        Servers = connection.ExecuteScalar<int>("select count(Id) from Server"),
+                        Servers = connection.ExecuteScalar<int>($"select count(Id) from {_options.TablePrefix}_Server"),
                         Succeeded = connection.ExecuteScalar<int>(succeededQuery, new {key = "stats:succeeded"}),
                         Deleted = connection.ExecuteScalar<int>(succeededQuery, new {key = "stats:deleted"}),
                         Recurring =

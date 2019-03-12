@@ -27,7 +27,7 @@ namespace Hangfire.MySql.Core
 
         public override IWriteOnlyTransaction CreateWriteTransaction()
         {
-            return new MySqlWriteOnlyTransaction(_storage);
+            return new MySqlWriteOnlyTransaction(_storage,_options);
         }
 
         public override IDisposable AcquireDistributedLock(string resource, TimeSpan timeout)
