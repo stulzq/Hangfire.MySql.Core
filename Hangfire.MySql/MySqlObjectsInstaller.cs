@@ -10,8 +10,10 @@ namespace Hangfire.MySql.Core
     public static class MySqlObjectsInstaller
     {
         private static readonly ILog Log = LogProvider.GetLogger(typeof(MySqlStorage));
-        public static void Install(MySqlConnection connection)
+        private static MySqlStorageOptions _options =new MySqlStorageOptions();
+        public static void Install(MySqlConnection connection, MySqlStorageOptions options)
         {
+            _options = options;
             if (connection == null) throw new ArgumentNullException("connection");
 
             if (TablesExists(connection))
@@ -22,7 +24,7 @@ namespace Hangfire.MySql.Core
 
             Log.Info("Start installing Hangfire SQL objects...");
 
-            var script = GetStringResource("Hangfire.MySql.Core.Install.sql");
+            var script = GetStringResource("Hangfire.MySql.Core.Install.sql").Replace("<tableprefix>", options.TablePrefix);
 
             connection.Execute(script);
 
@@ -31,7 +33,7 @@ namespace Hangfire.MySql.Core
 
         private static bool TablesExists(MySqlConnection connection)
         {
-            return connection.ExecuteScalar<string>("SHOW TABLES LIKE 'Job';") != null;            
+            return connection.ExecuteScalar<string>($"SHOW TABLES LIKE '{_options.TablePrefix}_Job';") != null;            
         }
 
         private static string GetStringResource(string resourceName)

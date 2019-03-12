@@ -61,7 +61,7 @@ namespace Hangfire.MySql.Core
             {
                 using (var connection = CreateAndOpenConnection())
                 {
-                    MySqlObjectsInstaller.Install(connection);
+                    MySqlObjectsInstaller.Install(connection, options);
                 }
             }
 
@@ -95,8 +95,8 @@ namespace Hangfire.MySql.Core
 
         public override IEnumerable<IServerComponent> GetComponents()
         {
-            yield return new ExpirationManager(this, _options.JobExpirationCheckInterval);
-            yield return new CountersAggregator(this, _options.CountersAggregateInterval);
+            yield return new ExpirationManager(this,_options, _options.JobExpirationCheckInterval);
+            yield return new CountersAggregator(this, _options, _options.CountersAggregateInterval);
         }
 
         public override void WriteOptionsToLog(ILog logger)
@@ -151,12 +151,12 @@ namespace Hangfire.MySql.Core
 
         public override IMonitoringApi GetMonitoringApi()
         {
-            return new MySqlMonitoringApi(this, _options.DashboardJobListLimit);
+            return new MySqlMonitoringApi(this, _options,_options.DashboardJobListLimit);
         }
 
         public override IStorageConnection GetConnection()
         {
-            return new MySqlStorageConnection(this);
+            return new MySqlStorageConnection(this,_options);
         }
 
         private bool IsConnectionString(string nameOrConnectionString)

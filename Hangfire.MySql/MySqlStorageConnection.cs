@@ -16,10 +16,13 @@ namespace Hangfire.MySql.Core
         private static readonly ILog Logger = LogProvider.GetLogger(typeof(MySqlStorageConnection));
 
         private readonly MySqlStorage _storage;
-        public MySqlStorageConnection(MySqlStorage storage)
+        private readonly MySqlStorageOptions _options;
+
+        public MySqlStorageConnection(MySqlStorage storage,MySqlStorageOptions options)
         {
             if (storage == null) throw new ArgumentNullException("storage");
             _storage = storage;
+            _options = options;
         }
 
         public override IWriteOnlyTransaction CreateWriteTransaction()
@@ -29,7 +32,7 @@ namespace Hangfire.MySql.Core
 
         public override IDisposable AcquireDistributedLock(string resource, TimeSpan timeout)
         {
-            return new MySqlDistributedLock(_storage, resource, timeout).Acquire();
+            return new MySqlDistributedLock(_storage, _options, resource, timeout).Acquire();
         }
 
         public override string CreateExpiredJob(Job job, IDictionary<string, string> parameters, DateTime createdAt, TimeSpan expireIn)
@@ -44,7 +47,7 @@ namespace Hangfire.MySql.Core
             return _storage.UseConnection(connection =>
             {
                 var jobId = connection.Query<int>(
-                    "insert into Job (InvocationData, Arguments, CreatedAt, ExpireAt) " +
+                    $"insert into {_options.TablePrefix}_Job (InvocationData, Arguments, CreatedAt, ExpireAt) " +
                     "values (@invocationData, @arguments, @createdAt, @expireAt); " +
                     "select last_insert_id();",
                     new
@@ -70,7 +73,7 @@ namespace Hangfire.MySql.Core
                     }
 
                     connection.Execute(
-                        "insert into JobParameter (JobId, Name, Value) values (@jobId, @name, @value)", 
+                        $"insert into {_options.TablePrefix}_JobParameter (JobId, Name, Value) values (@jobId, @name, @value)", 
                         parameterArray);
                 }
 
@@ -106,7 +109,7 @@ namespace Hangfire.MySql.Core
             _storage.UseConnection(connection =>
             {
                 connection.Execute(
-                    "insert into JobParameter (JobId, Name, Value) " +
+                    $"insert into J{_options.TablePrefix}_obParameter (JobId, Name, Value) " +
                     "value (@jobId, @name, @value) " +
                     "on duplicate key update Value = @value ",
                     new { jobId = id, name, value });
@@ -121,7 +124,7 @@ namespace Hangfire.MySql.Core
             return _storage.UseConnection(connection => 
                 connection.Query<string>(
                     "select Value " +
-                    "from JobParameter " +
+                    $"from {_options.TablePrefix}_JobParameter " +
                     "where JobId = @id and Name = @name",
                     new {id = id, name = name}).SingleOrDefault());
         }
@@ -136,7 +139,7 @@ namespace Hangfire.MySql.Core
                     connection
                         .Query<SqlJob>(
                             "select InvocationData, StateName, Arguments, CreatedAt " +
-                            "from Job " +
+                            $"from {_options.TablePrefix}_Job " +
                             "where Id = @id", 
                             new {id = jobId})
                         .SingleOrDefault();
@@ -177,7 +180,7 @@ namespace Hangfire.MySql.Core
                 var sqlState = 
                     connection.Query<SqlState>(
                         "select s.Name, s.Reason, s.Data " +
-                        "from State s inner join Job j on j.StateId = s.Id " +
+                        $"from {_options.TablePrefix}_State s inner join {_options.TablePrefix}_Job j on j.StateId = s.Id " +
                         "where j.Id = @jobId", 
                         new { jobId = jobId }).SingleOrDefault();
                 if (sqlState == null)
@@ -206,7 +209,7 @@ namespace Hangfire.MySql.Core
             _storage.UseConnection(connection =>
             {
                 connection.Execute(
-                    "INSERT INTO Server (Id, Data, LastHeartbeat) " +
+                    $"INSERT INTO {_options.TablePrefix}_Server (Id, Data, LastHeartbeat) " +
                     "VALUE (@id, @data, @heartbeat) " +
                     "ON DUPLICATE KEY UPDATE Data = @data, LastHeartbeat = @heartbeat",
                     new
@@ -230,7 +233,7 @@ namespace Hangfire.MySql.Core
             _storage.UseConnection(connection =>
             {
                 connection.Execute(
-                    "delete from Server where Id = @id",
+                    $"delete from {_options.TablePrefix}_Server where Id = @id",
                     new { id = serverId });
             });
         }
@@ -242,7 +245,7 @@ namespace Hangfire.MySql.Core
             _storage.UseConnection(connection =>
             {
                 connection.Execute(
-                    "update Server set LastHeartbeat = @now where Id = @id",
+                    $"update {_options.TablePrefix}_Server set LastHeartbeat = @now where Id = @id",
                     new { now = DateTime.UtcNow, id = serverId });
             });
         }
@@ -257,7 +260,7 @@ namespace Hangfire.MySql.Core
             return
                 _storage.UseConnection(connection =>
                     connection.Execute(
-                        "delete from Server where LastHeartbeat < @timeOutAt",
+                        $"delete from {_options.TablePrefix}_Server where LastHeartbeat < @timeOutAt",
                         new {timeOutAt = DateTime.UtcNow.Add(timeOut.Negate())}));
         }
 
@@ -268,7 +271,7 @@ namespace Hangfire.MySql.Core
             return
                 _storage.UseConnection(connection =>
                     connection.Query<int>(
-                        "select count(`Key`) from `Set` where `Key` = @key",
+                        $"select count(`Key`) from `{_options.TablePrefix}_Set` where `Key` = @key",
                         new {key = key}).First());
         }
 
@@ -282,7 +285,7 @@ namespace Hangfire.MySql.Core
 select `Value` 
 from (
 	    select `Value`, @rownum := @rownum + 1 AS rankvalue
-	    from `Set`,
+	    from `" + _options.TablePrefix + @"_Set`,
             (select @rownum := 0) r 
         where `Key` = @key
         order by Id
@@ -300,7 +303,7 @@ where ranked.rankvalue between @startingFrom and @endingAt",
                 _storage.UseConnection(connection =>
                 {
                     var result = connection.Query<string>(
-                        "select Value from `Set` where `Key` = @key",
+                        $"select Value from `{_options.TablePrefix}_Set` where `Key` = @key",
                         new {key});
 
                     return new HashSet<string>(result);
@@ -317,7 +320,7 @@ where ranked.rankvalue between @startingFrom and @endingAt",
                 _storage.UseConnection(connection =>
                     connection.Query<string>(
                         "select Value " +
-                        "from `Set` " +
+                        $"from `{_options.TablePrefix}_Set` " +
                         "where `Key` = @key and Score between @from and @to " +
                         "order by Score " +
                         "limit 1",
@@ -330,10 +333,10 @@ where ranked.rankvalue between @startingFrom and @endingAt",
             if (key == null) throw new ArgumentNullException("key");
 
             string query = @"
-select sum(s.`Value`) from (select sum(`Value`) as `Value` from Counter
+select sum(s.`Value`) from (select sum(`Value`) as `Value` from " + _options.TablePrefix + @"_Counter
 where `Key` = @key
 union all
-select `Value` from AggregatedCounter
+select `Value` from " + _options.TablePrefix + @"_AggregatedCounter
 where `Key` = @key) as s";
 
             return 
@@ -350,7 +353,7 @@ where `Key` = @key) as s";
                 _storage
                     .UseConnection(connection => 
                         connection.Query<long>(
-                            "select count(Id) from Hash where `Key` = @key", 
+                            $"select count(Id) from {_options.TablePrefix}_Hash where `Key` = @key", 
                             new { key = key }).Single());
         }
 
@@ -362,7 +365,7 @@ where `Key` = @key) as s";
             {
                 var result = 
                     connection.Query<DateTime?>(
-                        "select min(ExpireAt) from Hash where `Key` = @key", 
+                        $"select min(ExpireAt) from {_options.TablePrefix}_Hash where `Key` = @key", 
                         new { key = key }).Single();
                 if (!result.HasValue) return TimeSpan.FromSeconds(-1);
 
@@ -378,7 +381,7 @@ where `Key` = @key) as s";
                 _storage
                     .UseConnection(connection => 
                         connection.Query<long>(
-                            "select count(Id) from List where `Key` = @key", 
+                            $"select count(Id) from {_options.TablePrefix}_List where `Key` = @key", 
                             new { key = key }).Single());
         }
 
@@ -390,7 +393,7 @@ where `Key` = @key) as s";
             {
                 var result = 
                     connection.Query<DateTime?>(
-                        "select min(ExpireAt) from List where `Key` = @key", 
+                        $"select min(ExpireAt) from {_options.TablePrefix}_List where `Key` = @key", 
                         new { key = key }).Single();
                 if (!result.HasValue) return TimeSpan.FromSeconds(-1);
 
@@ -407,7 +410,7 @@ where `Key` = @key) as s";
                 _storage
                     .UseConnection(connection => 
                         connection.Query<string>(
-                            "select `Value` from Hash where `Key` = @key and `Field` = @field", 
+                            $"select `Value` from {_options.TablePrefix}_Hash where `Key` = @key and `Field` = @field", 
                             new { key = key, field = name }).SingleOrDefault());
         }
 
@@ -419,7 +422,7 @@ where `Key` = @key) as s";
 select `Value` 
 from (
         select `Value`, @rownum := @rownum + 1 AS rankvalue
-	    from `List`,
+	    from `" + _options.TablePrefix + @"_List`,
             (select @rownum := 0) r
         where `Key` = @key
         order by Id desc
@@ -439,7 +442,7 @@ where ranked.rankvalue between @startingFrom and @endingAt";
             if (key == null) throw new ArgumentNullException("key");
 
             string query = @"
-select `Value` from List
+select `Value` from " + _options.TablePrefix + @"_List
 where `Key` = @key
 order by Id desc";
 
@@ -455,7 +458,7 @@ order by Id desc";
                 var result = 
                     connection
                         .Query<DateTime?>(
-                            "select min(ExpireAt) from `Set` where `Key` = @key", 
+                            $"select min(ExpireAt) from `{_options.TablePrefix}_Set` where `Key` = @key", 
                             new { key = key }).Single();
                 if (!result.HasValue) return TimeSpan.FromSeconds(-1);
 
@@ -473,7 +476,7 @@ order by Id desc";
                 foreach (var keyValuePair in keyValuePairs)
                 {
                     connection.Execute(
-                        "insert into Hash (`Key`, Field, Value) " +
+                        $"insert into {_options.TablePrefix}_Hash (`Key`, Field, Value) " +
                         "value (@key, @field, @value) " +
                         "on duplicate key update Value = @value", 
                         new { key = key, field = keyValuePair.Key, value = keyValuePair.Value });
@@ -488,7 +491,7 @@ order by Id desc";
             return _storage.UseConnection(connection =>
             {
                 var result = connection.Query<SqlHash>(
-                    "select Field, Value from Hash where `Key` = @key",
+                    $"select Field, Value from {_options.TablePrefix}_Hash where `Key` = @key",
                     new {key})
                     .ToDictionary(x => x.Field, x => x.Value);
 

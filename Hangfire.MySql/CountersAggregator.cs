@@ -14,13 +14,15 @@ namespace Hangfire.MySql.Core
         private static readonly TimeSpan DelayBetweenPasses = TimeSpan.FromMilliseconds(500);
 
         private readonly MySqlStorage _storage;
+        private readonly MySqlStorageOptions _options;
         private readonly TimeSpan _interval;
 
-        public CountersAggregator(MySqlStorage storage, TimeSpan interval)
+        public CountersAggregator(MySqlStorage storage,MySqlStorageOptions options, TimeSpan interval)
         {
             if (storage == null) throw new ArgumentNullException("storage");
 
             _storage = storage;
+            _options = options;
             _interval = interval;
         }
 
@@ -54,24 +56,24 @@ namespace Hangfire.MySql.Core
             return GetType().ToString();
         }
 
-        private static string GetAggregationQuery()
+        private string GetAggregationQuery()
         {
             return @"
 SET TRANSACTION ISOLATION LEVEL READ COMMITTED;
 START TRANSACTION;
 
-INSERT INTO AggregatedCounter (`Key`, Value, ExpireAt)
+INSERT INTO  " + _options.TablePrefix + @"_AggregatedCounter (`Key`, Value, ExpireAt)
     SELECT `Key`, SUM(Value) as Value, MAX(ExpireAt) AS ExpireAt 
     FROM (
             SELECT `Key`, Value, ExpireAt
-            FROM Counter
+            FROM  " + _options.TablePrefix + @"_Counter
             LIMIT @count) tmp
 	GROUP BY `Key`
         ON DUPLICATE KEY UPDATE 
             Value = Value + VALUES(Value),
             ExpireAt = GREATEST(ExpireAt,VALUES(ExpireAt));
 
-DELETE FROM `Counter`
+DELETE FROM `" + _options.TablePrefix + @"_Counter`
 LIMIT @count;
 
 COMMIT;";

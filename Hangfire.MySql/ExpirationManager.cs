@@ -26,18 +26,20 @@ namespace Hangfire.MySql.Core
         };
 
         private readonly MySqlStorage _storage;
+        private readonly MySqlStorageOptions _options;
         private readonly TimeSpan _checkInterval;
 
-        public ExpirationManager(MySqlStorage storage)
-            : this(storage, TimeSpan.FromHours(1))
+        public ExpirationManager(MySqlStorage storage,MySqlStorageOptions options)
+            : this(storage, options,TimeSpan.FromHours(1))
         {
         }
 
-        public ExpirationManager(MySqlStorage storage, TimeSpan checkInterval)
+        public ExpirationManager(MySqlStorage storage,MySqlStorageOptions options, TimeSpan checkInterval)
         {
             if (storage == null) throw new ArgumentNullException("storage");
 
             _storage = storage;
+            _options = options;
             _checkInterval = checkInterval;
         }
 
@@ -45,7 +47,7 @@ namespace Hangfire.MySql.Core
         {
             foreach (var table in ProcessedTables)
             {
-                Logger.DebugFormat("Removing outdated records from table '{0}'...", table);
+                Logger.DebugFormat("Removing outdated records from table '{0}'...", _options.TablePrefix+"_"+table);
 
                 int removedCount = 0;
 
@@ -55,18 +57,19 @@ namespace Hangfire.MySql.Core
                     {
                         try
                         {
-                            Logger.DebugFormat("delete from `{0}` where ExpireAt < @now limit @count;", table);
+                            Logger.DebugFormat("delete from `{0}` where ExpireAt < @now limit @count;", _options.TablePrefix + "_" + table);
 
                             using (
                                 new MySqlDistributedLock(
                                     connection, 
+                                    _options,
                                     DistributedLockKey, 
                                     DefaultLockTimeout,
                                     cancellationToken).Acquire())
                             {
                                 removedCount = connection.Execute(
                                     String.Format(
-                                        "delete from `{0}` where ExpireAt < @now limit @count;", table),
+                                        "delete from `{0}` where ExpireAt < @now limit @count;", _options.TablePrefix + "_" + table),
                                     new {now = DateTime.UtcNow, count = NumberOfRecordsInSinglePass});
                             }
 
@@ -81,7 +84,7 @@ namespace Hangfire.MySql.Core
                     if (removedCount > 0)
                     {
                         Logger.Trace(String.Format("Removed {0} outdated record(s) from '{1}' table.", removedCount,
-                            table));
+                            _options.TablePrefix + "_" + table));
 
                         cancellationToken.WaitHandle.WaitOne(DelayBetweenPasses);
                         cancellationToken.ThrowIfCancellationRequested();

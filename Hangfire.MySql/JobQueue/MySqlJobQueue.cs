@@ -36,12 +36,12 @@ namespace Hangfire.MySql.Core.JobQueue
                 
                 try
                 {
-                    using (new MySqlDistributedLock(_storage, "JobQueue", TimeSpan.FromSeconds(30)))
+                    using (new MySqlDistributedLock(_storage,_options, "JobQueue", TimeSpan.FromSeconds(30)))
                     {
                         string token = Guid.NewGuid().ToString();
 
                         int nUpdated = connection.Execute(
-                            "update JobQueue set FetchedAt = UTC_TIMESTAMP(), FetchToken = @fetchToken " +
+                            $"update {_options.TablePrefix}_JobQueue set FetchedAt = UTC_TIMESTAMP(), FetchToken = @fetchToken " +
                             "where (FetchedAt is null or FetchedAt < DATE_ADD(UTC_TIMESTAMP(), INTERVAL @timeout SECOND)) " +
                             "   and Queue in @queues " +
                             "LIMIT 1;",
@@ -57,9 +57,7 @@ namespace Hangfire.MySql.Core.JobQueue
                             fetchedJob =
                                 connection
                                     .Query<FetchedJob>(
-                                        "select Id, JobId, Queue " +
-                                        "from JobQueue " +
-                                        "where FetchToken = @fetchToken;",
+                                        $"select Id, JobId, Queue  from {_options.TablePrefix}_JobQueue where FetchToken = @fetchToken;",
                                         new
                                         {
                                             fetchToken = token
@@ -84,13 +82,13 @@ namespace Hangfire.MySql.Core.JobQueue
                 }
             } while (fetchedJob == null);
 
-            return new MySqlFetchedJob(_storage, connection, fetchedJob);
+            return new MySqlFetchedJob(_storage, connection, fetchedJob, _options);
         }
 
         public void Enqueue(IDbConnection connection, string queue, string jobId)
         {
             Logger.TraceFormat("Enqueue JobId={0} Queue={1}", jobId, queue);
-            connection.Execute("insert into JobQueue (JobId, Queue) values (@jobId, @queue)", new {jobId, queue});
+            connection.Execute($"insert into {_options.TablePrefix}_JobQueue (JobId, Queue) values (@jobId, @queue)", new {jobId, queue});
         }
     }
 }

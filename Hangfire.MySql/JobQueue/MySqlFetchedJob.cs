@@ -13,6 +13,7 @@ namespace Hangfire.MySql.Core.JobQueue
 
         private readonly MySqlStorage _storage;
         private readonly IDbConnection _connection;
+        private readonly MySqlStorageOptions _options;
         private readonly int _id;
         private bool _removedFromQueue;
         private bool _requeued;
@@ -21,12 +22,13 @@ namespace Hangfire.MySql.Core.JobQueue
         public MySqlFetchedJob(
             MySqlStorage storage, 
             IDbConnection connection,
-            FetchedJob fetchedJob)
+            FetchedJob fetchedJob,MySqlStorageOptions options)
         {
 	        if (fetchedJob == null) throw new ArgumentNullException("fetchedJob");
 
             _storage = storage ?? throw new ArgumentNullException("storage");
             _connection = connection ?? throw new ArgumentNullException("connection");
+            _options = options;
             _id = fetchedJob.Id;
             JobId = fetchedJob.JobId.ToString(CultureInfo.InvariantCulture);
             Queue = fetchedJob.Queue; 
@@ -53,7 +55,7 @@ namespace Hangfire.MySql.Core.JobQueue
 
             //todo: unit test
             _connection.Execute(
-                "delete from JobQueue " +
+                $"delete from {_options.TablePrefix}_JobQueue " +
                 "where Id = @id",
                 new
                 {
@@ -69,7 +71,7 @@ namespace Hangfire.MySql.Core.JobQueue
 
             //todo: unit test
             _connection.Execute(
-                "update JobQueue set FetchedAt = null " +
+                $"update {_options.TablePrefix}_JobQueue set FetchedAt = null " +
                 "where Id = @id",
                 new
                 {

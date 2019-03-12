@@ -17,13 +17,15 @@ namespace Hangfire.MySql.Core.Monitoring
     internal class MySqlMonitoringApi : IMonitoringApi
     {
         private readonly MySqlStorage _storage;
+        private readonly MySqlStorageOptions _options;
         private readonly int? _jobListLimit;
 
-        public MySqlMonitoringApi([NotNull] MySqlStorage storage, int? jobListLimit)
+        public MySqlMonitoringApi([NotNull] MySqlStorage storage,MySqlStorageOptions options, int? jobListLimit)
         {
             if (storage == null) throw new ArgumentNullException("storage");
 
             _storage = storage;
+            _options = options;
             _jobListLimit = jobListLimit;
         }
         public IList<QueueWithTopEnqueuedJobsDto> Queues()
@@ -60,7 +62,7 @@ namespace Hangfire.MySql.Core.Monitoring
             return UseConnection<IList<ServerDto>>(connection =>
             {
                 var servers = 
-                    connection.Query<Entities.Server>("select * from Server").ToList();
+                    connection.Query<Entities.Server>($"select * from {_options.TablePrefix}_Server").ToList();
 
                 var result = new List<ServerDto>();
 
@@ -86,10 +88,9 @@ namespace Hangfire.MySql.Core.Monitoring
             return UseConnection(connection =>
             {
 
-                string sql = @"
-select * from Job where Id = @id;
-select * from JobParameter where JobId = @id;
-select * from State where JobId = @id order by Id desc;";
+                string sql = $"select * from {_options.TablePrefix}_Job where Id = @id;" +
+                             $"select * from {_options.TablePrefix}_JobParameter where JobId = @id;" +
+                             $"select * from {_options.TablePrefix}_State where JobId = @id order by Id desc;";
 
                 using (var multi = connection.QueryMultiple(sql, new { id = jobId }))
                 {
@@ -125,12 +126,12 @@ select * from State where JobId = @id order by Id desc;";
 
         public StatisticsDto GetStatistics()
         {
-            const string jobQuery = "select count(Id) from Job where StateName = @stateName";
-            const string succeededQuery = @"
+            string jobQuery =$"select count(Id) from {_options.TablePrefix}_Job where StateName = @stateName";
+            string succeededQuery = @"
 select sum(s.`Value`) from (
-    select sum(`Value`) as `Value` from Counter where `Key` = @key
+    select sum(`Value`) as `Value` from "+_options.TablePrefix+ @"_Counter where `Key` = @key
     union all
-    select `Value` from AggregatedCounter where `Key` = @key
+    select `Value` from " + _options.TablePrefix + @"_AggregatedCounter where `Key` = @key
 ) as s;";
 
             var statistics = 
@@ -145,7 +146,7 @@ select sum(s.`Value`) from (
                         Succeeded = connection.ExecuteScalar<int>(succeededQuery, new {key = "stats:succeeded"}),
                         Deleted = connection.ExecuteScalar<int>(succeededQuery, new {key = "stats:deleted"}),
                         Recurring =
-                            connection.ExecuteScalar<int>("select count(*) from `Set` where `Key` = 'recurring-jobs'")
+                            connection.ExecuteScalar<int>($"select count(*) from `{_options.TablePrefix}_Set` where `Key` = 'recurring-jobs'")
                     });
 
             statistics.Queues = _storage.QueueProviders
@@ -327,8 +328,8 @@ select sum(s.`Value`) from (
         private long GetNumberOfJobsByStateName(MySqlConnection connection, string stateName)
         {
             var sqlQuery = _jobListLimit.HasValue
-                ? "select count(j.Id) from (select Id from Job where StateName = @state limit @limit) as j"
-                : "select count(Id) from Job where StateName = @state";
+                ? $"select count(j.Id) from (select Id from {_options.TablePrefix}_Job where StateName = @state limit @limit) as j"
+                : $"select count(Id) from {_options.TablePrefix}_Job where StateName = @state";
 
             var count = connection.Query<int>(
                  sqlQuery,
@@ -355,9 +356,9 @@ select sum(s.`Value`) from (
             string jobsSql =
 @"select * from (
   select j.*, s.Reason as StateReason, s.Data as StateData, @rownum := @rownum + 1 AS rankvalue
-  from Job j
+  from " + _options.TablePrefix + @"_Job j
     cross join (SELECT @rownum := 0) r
-  left join State s on j.StateId = s.Id
+  left join " + _options.TablePrefix + @"_State s on j.StateId = s.Id
   where j.StateName = @stateName
   order by j.Id desc
 ) as j where j.rankvalue between @start and @end ";
@@ -429,7 +430,7 @@ select sum(s.`Value`) from (
             IDictionary<string, DateTime> keyMaps)
         {
             var valuesMap = connection.Query(
-                "select `Key`, `Value` as `Count` from AggregatedCounter where `Key` in @keys",
+                $"select `Key`, `Value` as `Count` from {_options.TablePrefix}_AggregatedCounter where `Key` in @keys",
                 new { keys = keyMaps.Keys })
                 .ToDictionary(x => (string)x.Key, x => (long)x.Count);
 
@@ -453,18 +454,18 @@ select sum(s.`Value`) from (
             IEnumerable<int> jobIds)
         {
             var enumerable = jobIds as int[] ?? jobIds.ToArray();
-            string enqueuedJobsSql = 
+            string enqueuedJobsSql =
 @"select j.*, s.Reason as StateReason, s.Data as StateData 
-from Job j
-left join State s on s.Id = j.StateId
+from " + _options.TablePrefix + @"_Job j
+left join " + _options.TablePrefix + @"_State s on s.Id = j.StateId
 where j.Id in @jobIds";
             
             if (!enumerable.Any())
             {
                 enqueuedJobsSql =
                     @"select j.*, s.Reason as StateReason, s.Data as StateData 
-from Job j
-left join State s on s.Id = j.StateId ";
+from " + _options.TablePrefix + @"_Job j
+left join " + _options.TablePrefix + @"_State s on s.Id = j.StateId ";
             }
             var jobs = connection.Query<SqlJob>(
                 enqueuedJobsSql,
@@ -489,8 +490,8 @@ left join State s on s.Id = j.StateId ";
         {
             string fetchedJobsSql = @"
 select j.*, s.Reason as StateReason, s.Data as StateData 
-from Job j
-left join State s on s.Id = j.StateId
+from " + _options.TablePrefix + @"_Job j
+left join " + _options.TablePrefix + @"_State s on s.Id = j.StateId
 where j.Id in @jobIds";
 
             var jobs = connection.Query<SqlJob>(
