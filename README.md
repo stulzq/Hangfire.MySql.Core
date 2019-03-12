@@ -8,7 +8,11 @@ I fix some bug and support .net standard 2.0
 
 MySql storage implementation of [Hangfire](http://hangfire.io/) - fire-and-forget, delayed and recurring tasks runner for .NET. Scalable and reliable background job runner. Supports multiple servers, CPU and I/O intensive, long-running and short-running jobs.
 
-**Some features of MySql storage implementation is under development!**
+Now, support table prefix
+
+````csharp
+services.AddHangfire(x => x.UseStorage(new MySqlStorage(Configuration.GetConnectionString("Hangfire"),new MySqlStorageOptions(){TablePrefix = "Custom"})));
+````
 
 ## Installation
 Install MySQL
