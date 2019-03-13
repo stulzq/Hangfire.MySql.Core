@@ -490,11 +490,11 @@ order by Id desc";
 
             return _storage.UseConnection(connection =>
             {
-                var result = connection.Query<SqlHash>(
+                var queryResult = connection.Query<SqlHash>(
                     $"select Field, Value from {_options.TablePrefix}_Hash where `Key` = @key",
-                    new {key})
-                    .ToDictionary(x => x.Field, x => x.Value);
-
+                    new {key});
+                    
+                var result= queryResult.ToDictionary(x => x.Field, x => x.Value);
                 return result.Count != 0 ? result : null;
             });
         }

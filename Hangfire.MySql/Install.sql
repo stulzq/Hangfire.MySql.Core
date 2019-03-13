@@ -9,7 +9,8 @@ CREATE TABLE `<tableprefix>_Job` (
   `Arguments` longtext NOT NULL,
   `CreatedAt` datetime NOT NULL,
   `ExpireAt` datetime DEFAULT NULL,
-  PRIMARY KEY (`Id`)
+  PRIMARY KEY (`Id`),
+  KEY `IX_Job_StateName` (`StateName`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 
@@ -21,7 +22,8 @@ CREATE TABLE `<tableprefix>_Counter` (
   `Key` varchar(100) NOT NULL,
   `Value` int(11) NOT NULL,
   `ExpireAt` datetime DEFAULT NULL,
-  PRIMARY KEY (`Id`)
+  PRIMARY KEY (`Id`),
+  KEY `IX_Counter_Key` (`Key`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 
@@ -30,7 +32,8 @@ CREATE TABLE `<tableprefix>_AggregatedCounter` (
 	`Key` varchar(100) NOT NULL,
 	`Value` int(11) NOT NULL,
 	ExpireAt datetime DEFAULT NULL,
-	PRIMARY KEY (`Id`)
+	PRIMARY KEY (`Id`),
+	UNIQUE KEY `IX_CounterAggregated_Key` (`Key`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 
@@ -52,7 +55,8 @@ CREATE TABLE `<tableprefix>_Hash` (
   `Field` varchar(40) NOT NULL,
   `Value` longtext,
   `ExpireAt` datetime DEFAULT NULL,
-  PRIMARY KEY (`Id`)
+  PRIMARY KEY (`Id`),
+  UNIQUE KEY `IX_Hash_Key_Field` (`Key`,`Field`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 
@@ -65,7 +69,9 @@ CREATE TABLE `<tableprefix>_JobParameter` (
   `Name` varchar(40) NOT NULL,
   `Value` longtext,
 
-  PRIMARY KEY (`Id`)
+  PRIMARY KEY (`Id`),
+  CONSTRAINT `IX_JobParameter_JobId_Name` UNIQUE (`JobId`,`Name`),
+  KEY `FK_JobParameter_Job` (`JobId`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ----------------------------
@@ -92,7 +98,8 @@ CREATE TABLE `<tableprefix>_JobState` (
   `Reason` varchar(100) DEFAULT NULL,
   `CreatedAt` datetime NOT NULL,
   `Data` longtext,
-  PRIMARY KEY (`Id`)
+  PRIMARY KEY (`Id`),
+  KEY `FK_JobState_Job` (`JobId`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ----------------------------
@@ -112,10 +119,11 @@ CREATE TABLE `<tableprefix>_Server` (
 CREATE TABLE `<tableprefix>_Set` (
   `Id` int(11) NOT NULL AUTO_INCREMENT,
   `Key` varchar(100) NOT NULL,
-  `Value` varchar(256) NOT NULL,
+  `Value` varchar(100) NOT NULL,
   `Score` float NOT NULL,
   `ExpireAt` datetime DEFAULT NULL,
-  PRIMARY KEY (`Id`)
+  PRIMARY KEY (`Id`),
+  UNIQUE KEY `IX_Set_Key_Value` (`Key`,`Value`)
 ) ENGINE=InnoDB  CHARSET=utf8mb4;
 
 
@@ -128,7 +136,8 @@ CREATE TABLE `<tableprefix>_State`
 	Reason varchar(100) NULL,
 	CreatedAt datetime NOT NULL,
 	Data longtext NULL,
-	PRIMARY KEY (`Id`)
+	PRIMARY KEY (`Id`),
+	KEY `FK_HangFire_State_Job` (`JobId`)
 ) ENGINE=InnoDB  CHARSET=utf8mb4;
 
 CREATE TABLE `<tableprefix>_List`

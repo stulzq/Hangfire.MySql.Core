@@ -15,7 +15,8 @@ namespace HangfireMysql.Sample.Controllers
         [HttpGet]
         public ActionResult<IEnumerable<string>> Get()
         {
-            BackgroundJob.Enqueue(() => Console.WriteLine("Simple!"));
+//            BackgroundJob.Enqueue(() => Console.WriteLine("Simple!"));
+            RecurringJob.AddOrUpdate("testRecurringJob",() => Console.WriteLine("Simple!"), "1 * * * * ");
             return new string[] { "value1", "value2" };
         }
 

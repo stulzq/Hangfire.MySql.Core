@@ -16,14 +16,7 @@ namespace Hangfire.MySql.Core
         private static readonly TimeSpan DelayBetweenPasses = TimeSpan.FromSeconds(1);
         private const int NumberOfRecordsInSinglePass = 1000;
 
-        private static readonly string[] ProcessedTables =
-        {
-            "AggregatedCounter",
-            "Job",
-            "List",
-            "Set",
-            "Hash",
-        };
+        private string[] ProcessedTables;
 
         private readonly MySqlStorage _storage;
         private readonly MySqlStorageOptions _options;
@@ -41,6 +34,7 @@ namespace Hangfire.MySql.Core
             _storage = storage;
             _options = options;
             _checkInterval = checkInterval;
+            ProcessedTables = new string[]{ "AggregatedCounter", "Job", "List", "Set",  "Hash" };
         }
 
         public void Execute(CancellationToken cancellationToken)
