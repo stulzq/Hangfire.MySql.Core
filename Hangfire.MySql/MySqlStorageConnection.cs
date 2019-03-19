@@ -109,7 +109,7 @@ namespace Hangfire.MySql.Core
             _storage.UseConnection(connection =>
             {
                 connection.Execute(
-                    $"insert into J{_options.TablePrefix}_obParameter (JobId, Name, Value) " +
+                    $"insert into {_options.TablePrefix}_JobParameter (JobId, Name, Value) " +
                     "value (@jobId, @name, @value) " +
                     "on duplicate key update Value = @value ",
                     new { jobId = id, name, value });
