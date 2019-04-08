@@ -38,7 +38,7 @@ namespace Hangfire.Oracle.Core.JobQueue
             }
         }
 
-        public IEnumerable<int> GetEnqueuedJobIds(string queue, int @from, int perPage)
+        public IEnumerable<int> GetEnqueuedJobIds(string queue, int from, int perPage)
         {
             const string sqlQuery = @"
 SELECT JOB_ID AS JobId
@@ -49,10 +49,10 @@ SELECT JOB_ID AS JobId
 ";
 
             return _storage.UseConnection(connection =>
-                connection.Query<int>(sqlQuery, new { QUEUE = queue, S = @from + 1, E = @from + perPage }));
+                connection.Query<int>(sqlQuery, new { QUEUE = queue, S = from + 1, E = from + perPage }));
         }
 
-        public IEnumerable<int> GetFetchedJobIds(string queue, int @from, int perPage)
+        public IEnumerable<int> GetFetchedJobIds(string queue, int from, int perPage)
         {
             return Enumerable.Empty<int>();
         }

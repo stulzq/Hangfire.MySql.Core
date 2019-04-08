@@ -12,7 +12,6 @@ using Hangfire.Oracle.Core.JobQueue;
 using Hangfire.States;
 using Hangfire.Storage;
 using Hangfire.Storage.Monitoring;
-using Oracle.ManagedDataAccess.Client;
 
 namespace Hangfire.Oracle.Core.Monitoring
 {

@@ -271,7 +271,7 @@ from List lst
        				(SELECT @rownum := 0) r ) ranked on ranked.Id = lst.Id
 where lst.Key = @key
     and ranked.rankvalue not between @start and @end",
-                new { key = key, start = keepStartingFrom + 1, end = keepEndingAt + 1 }));
+                new { key, start = keepStartingFrom + 1, end = keepEndingAt + 1 }));
         }
 
         public override void PersistHash(string key)

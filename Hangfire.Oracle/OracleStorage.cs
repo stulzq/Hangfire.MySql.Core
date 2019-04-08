@@ -55,7 +55,7 @@ namespace Hangfire.Oracle.Core
             {
                 using (var connection = CreateAndOpenConnection())
                 {
-                    OracleObjectsInstaller.Install(connection);
+                    OracleObjectsInstaller.Install(connection, options.SchemaName);
                 }
             }
 

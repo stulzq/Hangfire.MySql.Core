@@ -11,8 +11,6 @@ namespace Hangfire.Oracle.Core
     public class OracleDistributedLock : IDisposable, IComparable
     {
         private static readonly ILog Logger = LogProvider.GetLogger(typeof(OracleDistributedLock));
-
-        private readonly string _resource;
         private readonly TimeSpan _timeout;
         private readonly OracleStorage _storage;
         private readonly DateTime _start;
@@ -37,14 +35,14 @@ namespace Hangfire.Oracle.Core
         {
             Logger.TraceFormat("OracleDistributedLock resource={0}, timeout={1}", resource, timeout);
 
-            _resource = resource;
+            Resource = resource;
             _timeout = timeout;
             _connection = connection;
             _cancellationToken = cancellationToken;
             _start = DateTime.UtcNow;
         }
 
-        public string Resource => _resource;
+        public string Resource { get; }
 
         private int AcquireLock(string resource, TimeSpan timeout)
         {
@@ -72,22 +70,19 @@ INSERT INTO HF_DISTRIBUTED_LOCK (""RESOURCE"", CREATED_AT)
         {
             Release();
 
-            if (_storage != null)
-            {
-                _storage.ReleaseConnection(_connection);
-            }
+            _storage?.ReleaseConnection(_connection);
         }
 
         internal OracleDistributedLock Acquire()
         {
-            Logger.TraceFormat("Acquire resource={0}, timeout={1}", _resource, _timeout);
+            Logger.TraceFormat("Acquire resource={0}, timeout={1}", Resource, _timeout);
 
             int insertedObjectCount;
             do
             {
                 _cancellationToken.ThrowIfCancellationRequested();
 
-                insertedObjectCount = AcquireLock(_resource, _timeout);
+                insertedObjectCount = AcquireLock(Resource, _timeout);
 
                 if (ContinueCondition(insertedObjectCount))
                 {
@@ -110,7 +105,7 @@ INSERT INTO HF_DISTRIBUTED_LOCK (""RESOURCE"", CREATED_AT)
 
         internal void Release()
         {
-            Logger.TraceFormat("Release resource={0}", _resource);
+            Logger.TraceFormat("Release resource={0}", Resource);
 
             _connection
                 .Execute(
@@ -120,7 +115,7 @@ DELETE FROM HF_DISTRIBUTED_LOCK
 ",
                     new
                     {
-                        RES = _resource
+                        RES = Resource
                     });
         }
 
@@ -131,8 +126,7 @@ DELETE FROM HF_DISTRIBUTED_LOCK
                 return 1;
             }
 
-            var oracleDistributedLock = obj as OracleDistributedLock;
-            if (oracleDistributedLock != null)
+            if (obj is OracleDistributedLock oracleDistributedLock)
             {
                 return string.Compare(Resource, oracleDistributedLock.Resource, StringComparison.OrdinalIgnoreCase);
             }

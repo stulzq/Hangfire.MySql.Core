@@ -23,7 +23,7 @@ namespace Hangfire.Oracle.Core
 
         public TimeSpan QueuePollInterval
         {
-            get { return _queuePollInterval; }
+            get => _queuePollInterval;
             set
             {
                 var message = $"The QueuePollInterval property value should be positive. Given: {value}.";

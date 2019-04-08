@@ -6,13 +6,12 @@ using System.Threading;
 
 using Dapper;
 using Dapper.Oracle;
+
 using Hangfire.Common;
 using Hangfire.Logging;
 using Hangfire.Oracle.Core.Entities;
 using Hangfire.Server;
 using Hangfire.Storage;
-using Oracle.ManagedDataAccess.Client;
-using Oracle.ManagedDataAccess.Types;
 
 namespace Hangfire.Oracle.Core
 {
