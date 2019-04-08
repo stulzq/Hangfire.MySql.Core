@@ -30,8 +30,8 @@
     <PackageReference Include="Dapper.Oracle" Version="1.0.3" />
     <PackageReference Include="Microsoft.CSharp" Version="4.5.0" />
     <PackageReference Include="Newtonsoft.Json" Version="11.0.2" />
-    <PackageReference Include="Dapper" Version="1.50.5" />
-    <PackageReference Include="Hangfire.Core" Version="1.6.21" />
-    <PackageReference Include="Oracle.ManagedDataAccess.Core" Version="2.18.3" />
+    <PackageReference Include="Dapper" Version="1.60.6" />
+    <PackageReference Include="Hangfire.Core" Version="1.7.0" />
+    <PackageReference Include="Oracle.ManagedDataAccess.Core" Version="2.18.6" />
   </ItemGroup>
 </Project>
