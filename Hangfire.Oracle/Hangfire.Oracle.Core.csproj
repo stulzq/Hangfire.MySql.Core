@@ -34,4 +34,8 @@
     <PackageReference Include="Hangfire.Core" Version="1.7.0" />
     <PackageReference Include="Oracle.ManagedDataAccess.Core" Version="2.18.6" />
   </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Properties\" />
+  </ItemGroup>
 </Project>
