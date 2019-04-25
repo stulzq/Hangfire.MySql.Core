@@ -2,8 +2,9 @@
 
 Hangfire.Oracle.Core is based on Hangfire.MySqlStorage(https://github.com/arnoldasgudas/Hangfire.MySqlStorage)
 
-I fix some bug and support .net standard 2.0
+I fixed some bugs and support .net standard 2.0.
 
+[![Build status](https://ci.appveyor.com/api/projects/status/fuhr415en9uu89h7?svg=true)](https://ci.appveyor.com/project/AhmetKoylu/hangfire-oracle-core)
 [![Latest version](https://img.shields.io/nuget/v/Hangfire.Oracle.Core.svg)](https://www.nuget.org/packages/Hangfire.Oracle.Core/) 
 
 Oracle storage implementation of [Hangfire](http://hangfire.io/) - fire-and-forget, delayed and recurring tasks runner for .NET. Scalable and reliable background job runner. Supports multiple servers, CPU and I/O intensive, long-running and short-running jobs.
@@ -82,4 +83,7 @@ Hangfire provides a dashboard
 More info: [Hangfire Overview](http://hangfire.io/overview.html#integrated-monitoring-ui)
 
 ## Build
-Please use Visual Studio or any other tool of your choice to build the solution
+Please use Visual Studio or any other tool of your choice to build the solution.
+
+## Known Issues
+Currently Install.sql is not deployed if DB objects are not existing. As a workaround run your scripts in database and give give CRUD grants to the user that is given in connection string.
