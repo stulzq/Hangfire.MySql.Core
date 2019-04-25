@@ -66,7 +66,7 @@ namespace Hangfire.Oracle.Core.Monitoring
 
                 foreach (var server in servers)
                 {
-                    var data = JobHelper.FromJson<ServerData>(server.Data);
+                    var data = SerializationHelper.Deserialize<ServerData>(server.Data, SerializationOption.User);
                     result.Add(new ServerDto
                     {
                         Name = server.Id,
@@ -130,7 +130,7 @@ namespace Hangfire.Oracle.Core.Monitoring
                     StateName = x.Name,
                     CreatedAt = x.CreatedAt,
                     Reason = x.Reason,
-                    Data = new Dictionary<string, string>(JobHelper.FromJson<Dictionary<string, string>>(x.Data), StringComparer.OrdinalIgnoreCase),
+                    Data = new Dictionary<string, string>(SerializationHelper.Deserialize<Dictionary<string, string>>(x.Data, SerializationOption.User), StringComparer.OrdinalIgnoreCase),
                 }).ToList();
 
                 return new JobDetailsDto
@@ -384,7 +384,8 @@ SELECT Id
 
             foreach (var job in jobs)
             {
-                var deserializedData = JobHelper.FromJson<Dictionary<string, string>>(job.StateData);
+                var deserializedData = SerializationHelper.Deserialize<Dictionary<string,string>>(job.StateData, SerializationOption.User);
+
                 var stateData = deserializedData != null
                     ? new Dictionary<string, string>(deserializedData, StringComparer.OrdinalIgnoreCase)
                     : null;
@@ -399,12 +400,12 @@ SELECT Id
 
         private static Job DeserializeJob(string invocationData, string arguments)
         {
-            var data = JobHelper.FromJson<InvocationData>(invocationData);
+            var data = SerializationHelper.Deserialize<InvocationData>(invocationData, SerializationOption.User);
             data.Arguments = arguments;
 
             try
             {
-                return data.Deserialize();
+                return data.DeserializeJob();
             }
             catch (JobLoadException)
             {

@@ -47,11 +47,11 @@ namespace Hangfire.Oracle.Core
                 throw new ArgumentNullException(nameof(parameters));
             }
 
-            var invocationData = InvocationData.Serialize(job);
+            var invocationData = InvocationData.SerializeJob(job);
             invocationData.Arguments = null;
-            var arguments = InvocationData.Serialize(job);
+            var arguments = InvocationData.SerializeJob(job);
 
-            Logger.TraceFormat("CreateExpiredJob={0}", JobHelper.ToJson(invocationData));
+            Logger.TraceFormat("CreateExpiredJob={0}", SerializationHelper.Serialize(invocationData, SerializationOption.User));
 
             return _storage.UseConnection(connection =>
             {
@@ -64,7 +64,7 @@ namespace Hangfire.Oracle.Core
                     CREATED_AT = createdAt,
                     EXPIRE_AT = createdAt.Add(expireIn)
                 });
-                oracleDynamicParameters.Add("INVOCATION_DATA", JobHelper.ToJson(invocationData), OracleMappingType.NClob, ParameterDirection.Input);
+                oracleDynamicParameters.Add("INVOCATION_DATA", SerializationHelper.Serialize(invocationData, SerializationOption.User), OracleMappingType.NClob, ParameterDirection.Input);
                 oracleDynamicParameters.Add("ARGUMENTS", arguments.Arguments, OracleMappingType.NClob, ParameterDirection.Input);
 
                 connection.Execute(
@@ -192,7 +192,7 @@ namespace Hangfire.Oracle.Core
                     return null;
                 }
 
-                var invocationData = JobHelper.FromJson<InvocationData>(jobData.InvocationData);
+                var invocationData = SerializationHelper.Deserialize<InvocationData>(jobData.InvocationData, SerializationOption.User);
                 invocationData.Arguments = jobData.Arguments;
 
                 Job job = null;
@@ -200,7 +200,7 @@ namespace Hangfire.Oracle.Core
 
                 try
                 {
-                    job = invocationData.Deserialize();
+                    job = invocationData.DeserializeJob();
                 }
                 catch (JobLoadException ex)
                 {
@@ -240,7 +240,7 @@ namespace Hangfire.Oracle.Core
                 }
 
                 var data = new Dictionary<string, string>(
-                    JobHelper.FromJson<Dictionary<string, string>>(sqlState.Data),
+                    SerializationHelper.Deserialize<Dictionary<string, string>>(sqlState.Data, SerializationOption.User),
                     StringComparer.OrdinalIgnoreCase);
 
                 return new StateData
@@ -280,12 +280,12 @@ namespace Hangfire.Oracle.Core
                     new
                     {
                         ID = serverId,
-                        DATA = JobHelper.ToJson(new ServerData
+                        DATA = SerializationHelper.Serialize(new ServerData
                         {
                             WorkerCount = context.WorkerCount,
                             Queues = context.Queues,
                             StartedAt = DateTime.UtcNow,
-                        }),
+                        }, SerializationOption.User),
                         LAST_HEART_BEAT = DateTime.UtcNow
                     });
             });

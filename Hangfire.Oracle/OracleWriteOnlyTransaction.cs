@@ -5,6 +5,7 @@ using System.Linq;
 
 using Dapper;
 using Dapper.Oracle;
+
 using Hangfire.Common;
 using Hangfire.Logging;
 using Hangfire.Oracle.Core.Entities;
@@ -66,7 +67,7 @@ namespace Hangfire.Oracle.Core
                 CREATED_AT = DateTime.UtcNow,
                 ID = jobId
             });
-            oracleDynamicParameters.Add("DATA", JobHelper.ToJson(state.SerializeData()), OracleMappingType.NClob, ParameterDirection.Input);
+            oracleDynamicParameters.Add("DATA", SerializationHelper.Serialize(state.SerializeData(), SerializationOption.User), OracleMappingType.NClob, ParameterDirection.Input);
 
             QueueCommand(x => x.Execute(
                 @"
@@ -94,7 +95,7 @@ END;
                 REASON = state.Reason,
                 CREATED_AT = DateTime.UtcNow
             });
-            oracleDynamicParameters.Add("DATA", JobHelper.ToJson(state.SerializeData()), OracleMappingType.NClob, ParameterDirection.Input);
+            oracleDynamicParameters.Add("DATA", SerializationHelper.Serialize(state.SerializeData(), SerializationOption.User), OracleMappingType.NClob, ParameterDirection.Input);
 
             QueueCommand(x => x.Execute(
                 " INSERT INTO HF_JOB_STATE (ID, JOB_ID, NAME, REASON, CREATED_AT, DATA) " +
@@ -368,11 +369,13 @@ where lst.Key = @key
         {
             Logger.TraceFormat("RemoveHash key={0} ", key);
 
-            if (key == null) throw new ArgumentNullException(nameof(key));
+            if (key == null)
+            {
+                throw new ArgumentNullException(nameof(key));
+            }
 
             AcquireHashLock();
-            QueueCommand(x => x.Execute(
-                "DELETE FROM HF_HASH WHERE KEY = :KEY", new { KEY = key }));
+            QueueCommand(x => x.Execute("DELETE FROM HF_HASH WHERE KEY = :KEY", new { KEY = key }));
         }
 
         public override void Commit()
