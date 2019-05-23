@@ -9,9 +9,9 @@
     <Owners>Arnoldas Gudas</Owners>
     <PackageLicenseUrl>https://github.com/stulzq/Hangfire.MySql.Core/blob/master/License.md</PackageLicenseUrl>
     <PackageProjectUrl>https://github.com/stulzq/Hangfire.MySql.Core</PackageProjectUrl>
-    <Copyright>Copyright 2017-2018</Copyright>
+    <Copyright>Copyright 2017-2019</Copyright>
     <PackageTags>Hangfire MySql Hangfire.MySql Hangfire.MySql.Core</PackageTags>
-    <Version>2.2.2</Version>
+    <Version>2.2.3</Version>
     <AssemblyName>Hangfire.MySql.Core</AssemblyName>
     <RootNamespace>Hangfire.MySql.Core</RootNamespace>
     <PackageReleaseNotes>1.SQL script default encoding set to uft8mb4
