@@ -119,7 +119,7 @@ CREATE TABLE `<tableprefix>_Server` (
 CREATE TABLE `<tableprefix>_Set` (
   `Id` int(11) NOT NULL AUTO_INCREMENT,
   `Key` varchar(100) NOT NULL,
-  `Value` varchar(100) NOT NULL,
+  `Value` varchar(256) NOT NULL,
   `Score` float NOT NULL,
   `ExpireAt` datetime DEFAULT NULL,
   PRIMARY KEY (`Id`),
