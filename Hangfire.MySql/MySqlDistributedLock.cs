@@ -54,6 +54,7 @@ namespace Hangfire.MySql.Core
             return
                 _connection
                     .Execute(
+                        "SET SESSION TRANSACTION ISOLATION LEVEL READ UNCOMMITTED; " +
                         $"INSERT INTO {_options.TablePrefix}_DistributedLock (Resource, CreatedAt) " +
                         "  SELECT @resource, @now " +
                         "  FROM dual " +
