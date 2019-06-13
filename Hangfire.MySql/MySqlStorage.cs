@@ -78,10 +78,10 @@ namespace Hangfire.MySql.Core
             return connectionString + ";Allow User Variables=True;";
         }
 
-        internal MySqlStorage(MySqlConnection existingConnection)
+        public MySqlStorage(MySqlConnection existingConnection, MySqlStorageOptions options = null)
         {
 	        _existingConnection = existingConnection ?? throw new ArgumentNullException("existingConnection");
-            _options = new MySqlStorageOptions();
+            _options = options ?? new MySqlStorageOptions();
 
             InitializeQueueProviders();
         }
