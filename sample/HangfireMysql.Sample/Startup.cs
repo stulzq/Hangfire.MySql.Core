@@ -27,7 +27,7 @@ namespace HangfireMysql.Sample
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_2);
-            services.AddHangfire(x => x.UseStorage(new MySqlStorage(Configuration.GetConnectionString("Hangfire"),new MySqlStorageOptions(){TablePrefix = "Custom"})));
+            services.AddHangfire(x => x.UseMySqlStorage(Configuration.GetConnectionString("Hangfire"),new MySqlStorageOptions(){TablePrefix = "Custom"}));
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
