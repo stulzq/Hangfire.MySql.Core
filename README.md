@@ -1,3 +1,5 @@
+This project is no longer maintained, please use https://github.com/arnoldasgudas/Hangfire.MySqlStorage
+
 # Hangfire.MySql.Core Implementation
 
 Hangfire.MySql.Core is based on Hangfire.MySqlStorage(https://github.com/arnoldasgudas/Hangfire.MySqlStorage)
